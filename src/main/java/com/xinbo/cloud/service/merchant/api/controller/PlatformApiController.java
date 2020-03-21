@@ -4,7 +4,6 @@ import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.json.JSONUtil;
-import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xinbo.cloud.common.config.RocketMQConfig;
 import com.xinbo.cloud.common.constant.RocketMQTopic;
@@ -36,7 +35,6 @@ import com.xinbo.cloud.common.vo.common.UserMoneyFlowVo;
 import com.xinbo.cloud.common.vo.merchanta.api.PlatformApiRequestVo;
 import com.xinbo.cloud.common.vo.merchanta.api.TransRecordRequestVo;
 import com.xinbo.cloud.common.vo.merchanta.api.TranslateRequestVo;
-import com.xinbo.cloud.service.merchant.api.common.PlatformApiCommon;
 import com.xinbo.cloud.service.merchant.api.service.JwtService;
 import com.xinbo.cloud.service.merchant.api.service.UserService;
 import io.swagger.annotations.ApiOperation;
@@ -50,7 +48,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import javax.validation.Valid;
 import java.util.Date;
 import java.util.List;
@@ -99,9 +96,9 @@ public class PlatformApiController {
     public ActionResult playGame(@Valid @RequestBody PlatformApiRequestVo playGameVo) {
         int gameId = Integer.parseInt(playGameVo.getGameId());
         //Step 1: 验证游戏Id
-        boolean isValidateGameId = PlatformApiCommon.validateGameId(gameId);
-        if (!isValidateGameId) {
-            return ResultFactory.error("游戏不存在");
+        PlatGameTypeEnum platGameTypeEnum = PlatGameTypeEnum.valueOf(gameId);
+        if (platGameTypeEnum == null){
+            ResultFactory.error("游戏不存在");
         }
         //Step 2: 验证渠道号
         Merchant merchant = platformApiService.getByMerchantCode(playGameVo.getChannel());
@@ -110,7 +107,7 @@ public class PlatformApiController {
         }
 
         //Step 3: 验证签名
-        boolean isValidate = PlatformApiCommon.validateSign(playGameVo, merchant.getMerchantKey());
+        boolean isValidate = platformApiService.validateSign(playGameVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }
@@ -156,7 +153,7 @@ public class PlatformApiController {
         }
 
         //Step 2: 验证签名
-        boolean isValidate = PlatformApiCommon.validateSign(createAccountVo, merchant.getMerchantKey());
+        boolean isValidate = platformApiService.validateSign(createAccountVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }
@@ -205,10 +202,10 @@ public class PlatformApiController {
         }
 
         //Step 2: 验证签名
-        boolean isValidate = PlatformApiCommon.validateSign(translateRequestVo, merchant.getMerchantKey());
-        if (!isValidate) {
-            return ResultFactory.error("验证签名失败");
-        }
+//        boolean isValidate = platformApiService.validateSign(translateRequestVo, merchant.getMerchantKey());
+//        if (!isValidate) {
+//            return ResultFactory.error("验证签名失败");
+//        }
 
         //Step 3: 验证用户
         UserInfoVo userInfoVo = UserInfoVo.builder().userName(translateRequestVo.getUsername()).dataNode(merchant.getDataNode()).build();
@@ -230,8 +227,8 @@ public class PlatformApiController {
                 .moneyChangeEnum(MoneyChangeEnum.MoneyIn.getCode()).build();
 
         UserBalanceOperationDto balanceOperationDto = UserBalanceOperationDto.builder().userId(userInfoDto.getUserId()).userName(userInfoDto.getUserName())
-                .MerchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).MerchantSerial(translateRequestVo.getMerchantSerial())
-                .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyIn.getCode()).Remark(MoneyChangeEnum.MoneyIn.getMsg()).build();
+                .merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
+                .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyIn.getCode()).remark(MoneyChangeEnum.MoneyIn.getMsg()).build();
 
         //Step 5: 开始转入
         String lockName = String.format(ZookeeperLockKey.USER_LOCK, "moneyIn");
@@ -290,7 +287,7 @@ public class PlatformApiController {
         }
 
         //Step 2: 验证签名
-        boolean isValidate = PlatformApiCommon.validateSign(translateRequestVo, merchant.getMerchantKey());
+        boolean isValidate = platformApiService.validateSign(translateRequestVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }
@@ -317,8 +314,8 @@ public class PlatformApiController {
                 .moneyChangeEnum(MoneyChangeEnum.MoneyOut.getCode()).build();
 
         UserBalanceOperationDto balanceOperationDto = UserBalanceOperationDto.builder().userId(userInfoDto.getUserId()).userName(userInfoDto.getUserName())
-                .MerchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).MerchantSerial(translateRequestVo.getMerchantSerial())
-                .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyOut.getCode()).Remark(MoneyChangeEnum.MoneyOut.getMsg()).build();
+                .merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
+                .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyOut.getCode()).remark(MoneyChangeEnum.MoneyOut.getMsg()).build();
         //Step 5: 开始转出
         String lockName = String.format(ZookeeperLockKey.USER_LOCK, "moneyOut");
         ZookeeperConfig config = ZookeeperConfig.builder()
@@ -374,7 +371,7 @@ public class PlatformApiController {
         }
 
         //Step 2: 验证签名
-        boolean isValidate = PlatformApiCommon.validateSign(queryBalanceVo, merchant.getMerchantKey());
+        boolean isValidate = platformApiService.validateSign(queryBalanceVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }
@@ -401,7 +398,7 @@ public class PlatformApiController {
         }
 
         //Step 2: 验证签名
-        boolean isValidate = PlatformApiCommon.validateSign(transRecordRequestVo, merchant.getMerchantKey());
+        boolean isValidate = platformApiService.validateSign(transRecordRequestVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }
@@ -435,7 +432,7 @@ public class PlatformApiController {
         }
 
         //Step 2: 验证签名
-        boolean isValidate = PlatformApiCommon.validateSign(loginOutVo, merchant.getMerchantKey());
+        boolean isValidate = platformApiService.validateSign(loginOutVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }
