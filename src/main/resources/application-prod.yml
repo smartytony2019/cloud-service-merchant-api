@@ -1,0 +1,68 @@
+server:
+  port: 13000
+
+ribbon:
+  ReadTimeout: 60000
+  ConnectTimeout: 60000
+
+spring:
+  application:
+    name: cloud-service-merchant-api
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 103.84.110.202:8848
+  datasource:
+    #    url: jdbc:mysql://127.0.0.1:3306/spring-boot-demo?useUnicode=true&characterEncoding=UTF-8&useSSL=false&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT%2B8
+    url: jdbc:mysql://103.84.110.202:3306/cloud?useUnicode=true&characterEncoding=UTF-8&useSSL=false&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT%2B8
+    username: root
+    password: ^qaz123@hm!@#$
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    initialization-mode: always
+    continue-on-error: true
+    #    schema:
+    #      - "classpath:db/schema.sql"
+    #    data:
+    #      - "classpath:db/data.sql"
+    hikari:
+      minimum-idle: 5
+      connection-test-query: SELECT 1 FROM DUAL
+      maximum-pool-size: 20
+      auto-commit: true
+      idle-timeout: 30000
+      pool-name: SpringBootDemoHikariCP
+      max-lifetime: 60000
+      connection-timeout: 30000
+
+logging:
+  level:
+    com.xkcoding: debug
+    com.xkcoding.orm.mybatis.MapperAndPage.mapper: trace
+mybatis:
+  configuration:
+    # 下划线转驼峰
+    map-underscore-to-camel-case: true
+  mapper-locations: classpath:mappers/common/*.xml,classpath:mappers/sport/*.xml,classpath:mappers/lottery/*.xml
+  type-aliases-package: com.xinbo.cloud.common.domain
+mapper:
+  mappers:
+    - tk.mybatis.mapper.MyMapper
+  not-empty: true
+  style: camelhump
+  wrap-keyword: "`{0}`"
+  safe-delete: true
+  safe-update: true
+  identity: MYSQL
+  pagehelper:
+    auto-dialect: true
+    helper-dialect: mysql
+    reasonable: true
+    params: count=countSql
+zookeeper:
+  server-addr: 103.84.110.202:2181,103.84.110.202:2182,103.84.110.202:2183
+  session-timeout: 120000
+rocketmq:
+  name-server: 103.84.110.202:9876
+  producer-group: sport_rocketmq_producer_group
+  producer-timeout: 300000
