@@ -1,5 +1,8 @@
 package com.xinbo.cloud.service.merchant.api.controller;
 
+import cn.hutool.core.convert.Convert;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
@@ -9,6 +12,8 @@ import com.xinbo.cloud.common.config.RocketMQConfig;
 import com.xinbo.cloud.common.constant.RocketMQTopic;
 import com.xinbo.cloud.common.domain.statistics.SportActiveUserStatistics;
 import com.xinbo.cloud.common.dto.RocketMessage;
+import com.xinbo.cloud.common.dto.common.GameAddressDto;
+import com.xinbo.cloud.common.dto.common.MerchantDto;
 import com.xinbo.cloud.common.dto.common.UserBalanceOperationDto;
 import com.xinbo.cloud.common.enums.UserStatusEnum;
 import com.xinbo.cloud.common.enums.UserTypeEnum;
@@ -17,8 +22,6 @@ import com.xinbo.cloud.common.enums.RocketMessageIdEnum;
 import com.xinbo.cloud.common.config.ZookeeperConfig;
 import com.xinbo.cloud.common.constant.ApiStatus;
 import com.xinbo.cloud.common.constant.ZookeeperLockKey;
-import com.xinbo.cloud.common.domain.common.GameAddress;
-import com.xinbo.cloud.common.domain.common.Merchant;
 import com.xinbo.cloud.common.domain.common.UserInfo;
 import com.xinbo.cloud.common.dto.ActionResult;
 import com.xinbo.cloud.common.dto.JwtUser;
@@ -28,14 +31,16 @@ import com.xinbo.cloud.common.enums.PlatGameTypeEnum;
 import com.xinbo.cloud.common.library.DesEncrypt;
 import com.xinbo.cloud.common.library.DistributedLock;
 import com.xinbo.cloud.common.service.library.rocketmq.RocketMQService;
-import com.xinbo.cloud.common.service.merchant.api.PlatformApiService;
+import com.xinbo.cloud.common.utils.JsonUtil;
 import com.xinbo.cloud.common.vo.common.UpdateUserInfoMoneyVo;
 import com.xinbo.cloud.common.vo.common.UserInfoVo;
 import com.xinbo.cloud.common.vo.common.UserMoneyFlowVo;
 import com.xinbo.cloud.common.vo.merchanta.api.PlatformApiRequestVo;
 import com.xinbo.cloud.common.vo.merchanta.api.TransRecordRequestVo;
 import com.xinbo.cloud.common.vo.merchanta.api.TranslateRequestVo;
+import com.xinbo.cloud.service.merchant.api.common.PlatformApiCommon;
 import com.xinbo.cloud.service.merchant.api.service.JwtService;
+import com.xinbo.cloud.service.merchant.api.service.MerchantServiceInterface;
 import com.xinbo.cloud.service.merchant.api.service.UserService;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +54,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
@@ -63,16 +69,15 @@ import java.util.function.Function;
 @RequestMapping("platformApi")
 public class PlatformApiController {
     @Autowired
-    @Qualifier("platformApiServiceImpl")
-    private PlatformApiService platformApiService;
-
-    @Autowired
     @Qualifier("rocketMQServiceImpl")
     private RocketMQService rocketMQService;
 
     @Autowired
     @SuppressWarnings("all")
     private UserService userService;
+    @Autowired
+    @SuppressWarnings("all")
+    private MerchantServiceInterface merchantService;
 
     @Autowired
     @SuppressWarnings("all")
@@ -101,16 +106,17 @@ public class PlatformApiController {
             ResultFactory.error("游戏不存在");
         }
         //Step 2: 验证渠道号
-        Merchant merchant = platformApiService.getByMerchantCode(playGameVo.getChannel());
-        if (merchant == null) {
+        ActionResult merchantActionResult = merchantService.getByMerchantCode(playGameVo.getChannel());
+        if (merchantActionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error("渠道不存在");
         }
+        MerchantDto merchant = Convert.convert(MerchantDto.class,merchantActionResult.getData());
 
         //Step 3: 验证签名
-        boolean isValidate = platformApiService.validateSign(playGameVo, merchant.getMerchantKey());
-        if (!isValidate) {
-            return ResultFactory.error("验证签名失败");
-        }
+//        boolean isValidate = PlatformApiCommon.validateSign(playGameVo, merchant.getMerchantKey());
+//        if (!isValidate) {
+//            return ResultFactory.error("验证签名失败");
+//        }
 
         //Step 4: 验证用户
         UserInfoVo userInfoVo = UserInfoVo.builder().userName(playGameVo.getUsername()).dataNode(merchant.getDataNode()).build();
@@ -118,15 +124,16 @@ public class PlatformApiController {
         if (actionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error(actionResult.getMsg());
         }
-        UserInfoDto userInfoDto = new ObjectMapper().convertValue(actionResult.getData(), UserInfoDto.class);
+        UserInfoDto userInfoDto = Convert.convert(UserInfoDto.class,actionResult.getData());
         //Step 5: 返回游戏链接Url
         PlatGameTypeEnum platGameType = (gameId >= 1000 && gameId < 3000) ? PlatGameTypeEnum.Lottery : PlatGameTypeEnum.Sport;
-        List<GameAddress> listGameAddress = platformApiService.getGameAddressList(platGameType.getCode());
-        if (listGameAddress.isEmpty()) {
+        actionResult = merchantService.getGameAddressList(platGameType.getCode());
+        if (actionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error("游戏链接不存在");
         }
+        List<GameAddressDto> listGameAddress =Convert.convert(new TypeReference<List<GameAddressDto>>() {}, actionResult.getData());
         int index = RandomUtil.randomInt(0, listGameAddress.size());
-        GameAddress gameAddress = listGameAddress.get(index);
+        GameAddressDto gameAddress = listGameAddress.get(index);
         String gameUrl = gameAddress.getGameUrl() + ((gameId != PlatGameTypeEnum.Lottery.getCode() && gameId != PlatGameTypeEnum.Sport.getCode()) ? "/lottery-bet/" + playGameVo.getGameId() : "");
 
         //Step 6.生成token并加入redis
@@ -147,13 +154,14 @@ public class PlatformApiController {
     public ActionResult createAccount(@Valid @RequestBody PlatformApiRequestVo createAccountVo) {
 
         //Step 1: 验证渠道号
-        Merchant merchant = platformApiService.getByMerchantCode(createAccountVo.getChannel());
-        if (merchant == null) {
+        ActionResult merchantActionResult = merchantService.getByMerchantCode(createAccountVo.getChannel());
+        if (merchantActionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error("渠道不存在");
         }
+        MerchantDto merchant = Convert.convert(MerchantDto.class,merchantActionResult.getData());
 
         //Step 2: 验证签名
-        boolean isValidate = platformApiService.validateSign(createAccountVo, merchant.getMerchantKey());
+        boolean isValidate = PlatformApiCommon.validateSign(createAccountVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }
@@ -167,7 +175,7 @@ public class PlatformApiController {
         if (actionResult.getCode() != ApiStatus.SUCCESS) {
             log.info("添加用户失败，原因：{}", actionResult.getMsg());
         }
-        UserInfoDto userInfoDto = new ObjectMapper().convertValue(actionResult.getData(), UserInfoDto.class);
+        UserInfoDto userInfoDto = Convert.convert(UserInfoDto.class,actionResult.getData());
 
         //Step 4：用户活跃统计初使化
         SportActiveUserStatistics sportActiveUserStatistics = SportActiveUserStatistics.builder().merchantCode(merchant.getMerchantCode())
@@ -196,13 +204,14 @@ public class PlatformApiController {
     @PostMapping("translateIn")
     public ActionResult translateIn(@Valid @RequestBody TranslateRequestVo translateRequestVo) {
         //Step 1: 验证渠道号
-        Merchant merchant = platformApiService.getByMerchantCode(translateRequestVo.getChannel());
-        if (merchant == null) {
+        ActionResult merchantActionResult = merchantService.getByMerchantCode(translateRequestVo.getChannel());
+        if (merchantActionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error("渠道不存在");
         }
+        MerchantDto merchant = Convert.convert(MerchantDto.class,merchantActionResult.getData());
 
         //Step 2: 验证签名
-//        boolean isValidate = platformApiService.validateSign(translateRequestVo, merchant.getMerchantKey());
+//        boolean isValidate = PlatformApiCommon.validateSign(translateRequestVo, merchant.getMerchantKey());
 //        if (!isValidate) {
 //            return ResultFactory.error("验证签名失败");
 //        }
@@ -213,7 +222,7 @@ public class PlatformApiController {
         if (actionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error(actionResult.getMsg());
         }
-        UserInfoDto userInfoDto = new ObjectMapper().convertValue(actionResult.getData(), UserInfoDto.class);
+        UserInfoDto userInfoDto = Convert.convert(UserInfoDto.class,actionResult.getData());
         //Step 4: 验证金额
         if (translateRequestVo.getAmount() <= 0) {
             return ResultFactory.error("金额有误");
@@ -228,7 +237,8 @@ public class PlatformApiController {
 
         UserBalanceOperationDto balanceOperationDto = UserBalanceOperationDto.builder().userId(userInfoDto.getUserId()).userName(userInfoDto.getUserName())
                 .merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
-                .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyIn.getCode()).remark(MoneyChangeEnum.MoneyIn.getMsg()).build();
+                .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyIn.getCode())
+                .remark(MoneyChangeEnum.MoneyIn.getMsg()).operationDate(DateUtil.parse(DateUtil.today())).build();
 
         //Step 5: 开始转入
         String lockName = String.format(ZookeeperLockKey.USER_LOCK, "moneyIn");
@@ -247,7 +257,7 @@ public class PlatformApiController {
             Function<UpdateUserInfoMoneyVo, Boolean> transactionFunc = m -> {
                 Boolean result = false;
                 try {
-                    ActionResult translateInResult = userService.translateOut(m);
+                    ActionResult translateInResult = userService.translate(m);
                     result = translateInResult.getCode() == 0;
                 } catch (Exception ex) {
                     log.error("余额转入失败", ex);
@@ -281,13 +291,14 @@ public class PlatformApiController {
     public ActionResult translateOut(@Valid @RequestBody TranslateRequestVo translateRequestVo) {
 
         //Step 1: 验证渠道号
-        Merchant merchant = platformApiService.getByMerchantCode(translateRequestVo.getChannel());
-        if (merchant == null) {
+        ActionResult merchantActionResult = merchantService.getByMerchantCode(translateRequestVo.getChannel());
+        if (merchantActionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error("渠道不存在");
         }
+        MerchantDto merchant = Convert.convert(MerchantDto.class,merchantActionResult.getData());
 
         //Step 2: 验证签名
-        boolean isValidate = platformApiService.validateSign(translateRequestVo, merchant.getMerchantKey());
+        boolean isValidate = PlatformApiCommon.validateSign(translateRequestVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }
@@ -298,7 +309,7 @@ public class PlatformApiController {
         if (actionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error(actionResult.getMsg());
         }
-        UserInfoDto userInfoDto = new ObjectMapper().convertValue(actionResult.getData(), UserInfoDto.class);
+        UserInfoDto userInfoDto = Convert.convert(UserInfoDto.class,actionResult.getData());
 
         //Step 4: 验证金额
         if (translateRequestVo.getAmount() <= 0) {
@@ -315,7 +326,8 @@ public class PlatformApiController {
 
         UserBalanceOperationDto balanceOperationDto = UserBalanceOperationDto.builder().userId(userInfoDto.getUserId()).userName(userInfoDto.getUserName())
                 .merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
-                .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyOut.getCode()).remark(MoneyChangeEnum.MoneyOut.getMsg()).build();
+                .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyOut.getCode())
+                .remark(MoneyChangeEnum.MoneyOut.getMsg()).operationDate(DateUtil.parse(DateUtil.today())).build();
         //Step 5: 开始转出
         String lockName = String.format(ZookeeperLockKey.USER_LOCK, "moneyOut");
         ZookeeperConfig config = ZookeeperConfig.builder()
@@ -333,7 +345,7 @@ public class PlatformApiController {
             Function<UpdateUserInfoMoneyVo, Boolean> transactionFunc = m -> {
                 Boolean result = false;
                 try {
-                    ActionResult translateOutResult = userService.translateOut(m);
+                    ActionResult translateOutResult = userService.translate(m);
                     result = translateOutResult.getCode() == 0;
                 } catch (Exception ex) {
                     log.error("RocketMQ本地事务执行失败", ex);
@@ -365,13 +377,14 @@ public class PlatformApiController {
     public ActionResult queryBalance(@Valid @RequestBody PlatformApiRequestVo queryBalanceVo) {
 
         //Step 1: 验证渠道号
-        Merchant merchant = platformApiService.getByMerchantCode(queryBalanceVo.getChannel());
-        if (merchant == null) {
+        ActionResult merchantActionResult = merchantService.getByMerchantCode(queryBalanceVo.getChannel());
+        if (merchantActionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error("渠道不存在");
         }
+        MerchantDto merchant = Convert.convert(MerchantDto.class,merchantActionResult.getData());
 
         //Step 2: 验证签名
-        boolean isValidate = platformApiService.validateSign(queryBalanceVo, merchant.getMerchantKey());
+        boolean isValidate = PlatformApiCommon.validateSign(queryBalanceVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }
@@ -382,7 +395,7 @@ public class PlatformApiController {
         if (actionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error(actionResult.getMsg());
         }
-        UserInfoDto userInfoDto = new ObjectMapper().convertValue(actionResult.getData(), UserInfoDto.class);
+        UserInfoDto userInfoDto = Convert.convert(UserInfoDto.class,actionResult.getData());
         return ResultFactory.success(userInfoDto.getMoney());
     }
 
@@ -392,13 +405,14 @@ public class PlatformApiController {
     public ActionResult transRecord(@Valid @RequestBody TransRecordRequestVo transRecordRequestVo) {
 
         //Step 1: 验证渠道号
-        Merchant merchant = platformApiService.getByMerchantCode(transRecordRequestVo.getChannel());
-        if (merchant == null) {
+        ActionResult merchantActionResult = merchantService.getByMerchantCode(transRecordRequestVo.getChannel());
+        if (merchantActionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error("渠道不存在");
         }
+        MerchantDto merchant = Convert.convert(MerchantDto.class,merchantActionResult.getData());
 
         //Step 2: 验证签名
-        boolean isValidate = platformApiService.validateSign(transRecordRequestVo, merchant.getMerchantKey());
+        boolean isValidate = PlatformApiCommon.validateSign(transRecordRequestVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }
@@ -426,13 +440,13 @@ public class PlatformApiController {
     public ActionResult loginOut(@Valid @RequestBody PlatformApiRequestVo loginOutVo) {
 
         //Step 1: 验证渠道号
-        Merchant merchant = platformApiService.getByMerchantCode(loginOutVo.getChannel());
-        if (merchant == null) {
+        ActionResult merchantActionResult = merchantService.getByMerchantCode(loginOutVo.getChannel());
+        if (merchantActionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error("渠道不存在");
         }
-
+        MerchantDto merchant = Convert.convert(MerchantDto.class,merchantActionResult.getData());
         //Step 2: 验证签名
-        boolean isValidate = platformApiService.validateSign(loginOutVo, merchant.getMerchantKey());
+        boolean isValidate = PlatformApiCommon.validateSign(loginOutVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
         }

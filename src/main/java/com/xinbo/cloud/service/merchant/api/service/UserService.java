@@ -6,8 +6,8 @@ import com.xinbo.cloud.common.vo.common.UpdateUserInfoMoneyVo;
 import com.xinbo.cloud.common.vo.common.UserInfoVo;
 import com.xinbo.cloud.common.vo.common.UserMoneyFlowVo;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 /**
  * @author 汉斯
@@ -22,7 +22,7 @@ public interface UserService {
      * @return
      */
     @PostMapping("/userInfo/getUserInfoByUserName")
-    ActionResult getUser(UserInfoVo vo);
+    ActionResult getUser(@RequestBody UserInfoVo vo);
 
     /**
      * 添加用户
@@ -33,20 +33,13 @@ public interface UserService {
     ActionResult addUser(UserInfo userinfo);
 
     /**
-     * 余额转入
+     * 余额转入转出
      * @param userInfoMoneyVo
      * @return
      */
     @PostMapping("/userInfo/updateUserInfoMoney")
-    ActionResult translateIn(UpdateUserInfoMoneyVo userInfoMoneyVo);
+    ActionResult translate(@RequestBody UpdateUserInfoMoneyVo userInfoMoneyVo);
 
-    /**
-     * 余额转出
-     * @param userInfoMoneyVo
-     * @return
-     */
-    @PostMapping("/userInfo/updateUserInfoMoney")
-    ActionResult translateOut(UpdateUserInfoMoneyVo userInfoMoneyVo);
 
     /**
      * 查询订单状态
@@ -54,7 +47,7 @@ public interface UserService {
      * @return
      */
     @PostMapping("/userInfo/getTranslateIsSuccess")
-    ActionResult transRecord(UserMoneyFlowVo userMoneyFlowVo);
+    ActionResult transRecord(@RequestBody UserMoneyFlowVo userMoneyFlowVo);
 
     /**
      * 用户登录
@@ -62,6 +55,6 @@ public interface UserService {
      * @return
      */
     @PostMapping("/userInfo/stringGet")
-    ActionResult loginOut(UserInfo userinfo);
+    ActionResult loginOut(@RequestBody UserInfo userinfo);
 
 }
