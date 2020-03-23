@@ -1,5 +1,7 @@
 server:
   port: 13000
+  servlet:
+    context-path: /gw-merchant-api
 
 ribbon:
   ReadTimeout: 60000
