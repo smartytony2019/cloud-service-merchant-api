@@ -21,7 +21,7 @@ public interface UserService {
      * @param vo   用户名：merchantKey_username
      * @return
      */
-    @PostMapping("/userInfo/getUserInfoByUserName")
+    @PostMapping("/gw-user/userInfo/getUserInfoByUserName")
     ActionResult getUser(@RequestBody UserInfoVo vo);
 
     /**
@@ -29,7 +29,7 @@ public interface UserService {
      * @param userinfo
      * @return
      */
-    @PostMapping("/userInfo/insertUserInfo")
+    @PostMapping("/gw-user/userInfo/insertUserInfo")
     ActionResult addUser(UserInfo userinfo);
 
     /**

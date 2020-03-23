@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 public interface JwtService {
 
 
-    @PostMapping("/oauth/generateToken")
+    @PostMapping("/gw-oauth/oauth/generateToken")
     ActionResult generateToken(JwtUser jwtParams);
 
-    @PostMapping("/oauth/parseToken")
+    @PostMapping("/gw-oauth/oauth/parseToken")
     ActionResult parseToken(String token);
 
 }

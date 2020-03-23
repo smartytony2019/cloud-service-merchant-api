@@ -18,9 +18,9 @@ public interface MerchantServiceInterface {
      * @param merchantCode
      * @return
      */
-    @PostMapping("/merchant/getByMerchantCode")
+    @PostMapping("/gw-merchant/merchant/getByMerchantCode")
     ActionResult getByMerchantCode(@RequestBody String merchantCode);
 
-    @PostMapping("/merchant/getListByGameType")
+    @PostMapping("/gw-merchant/merchant/getListByGameType")
     ActionResult getGameAddressList(@RequestBody int gameType);
 }
