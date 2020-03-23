@@ -8,10 +8,14 @@ ribbon:
 spring:
   application:
     name: cloud-service-merchant-api
+
+  #nacos配置
   cloud:
     nacos:
       discovery:
         server-addr: 103.84.110.202:8848
+
+  #数据库配置
   datasource:
     #    url: jdbc:mysql://127.0.0.1:3306/spring-boot-demo?useUnicode=true&characterEncoding=UTF-8&useSSL=false&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT%2B8
     url: jdbc:mysql://103.84.110.202:3306/cloud?useUnicode=true&characterEncoding=UTF-8&useSSL=false&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT%2B8
