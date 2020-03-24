@@ -37,7 +37,7 @@ public interface UserService {
      * @param userInfoMoneyVo
      * @return
      */
-    @PostMapping("/userInfo/updateUserInfoMoney")
+    @PostMapping("/gw-user/userInfo/updateUserInfoMoney")
     ActionResult translate(@RequestBody UpdateUserInfoMoneyVo userInfoMoneyVo);
 
 
@@ -46,7 +46,7 @@ public interface UserService {
      * @param userMoneyFlowVo
      * @return
      */
-    @PostMapping("/userInfo/getTranslateIsSuccess")
+    @PostMapping("/gw-user/userInfo/getTranslateIsSuccess")
     ActionResult transRecord(@RequestBody UserMoneyFlowVo userMoneyFlowVo);
 
     /**
@@ -54,7 +54,7 @@ public interface UserService {
      * @param userinfo
      * @return
      */
-    @PostMapping("/userInfo/stringGet")
+    @PostMapping("/gw-user/userInfo/stringGet")
     ActionResult loginOut(@RequestBody UserInfo userinfo);
 
 }

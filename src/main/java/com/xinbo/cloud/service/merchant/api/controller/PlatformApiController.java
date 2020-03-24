@@ -7,14 +7,14 @@ import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.json.JSONUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xinbo.cloud.common.config.RocketMQConfig;
 import com.xinbo.cloud.common.constant.RocketMQTopic;
 import com.xinbo.cloud.common.domain.statistics.SportActiveUserStatistics;
 import com.xinbo.cloud.common.dto.RocketMessage;
 import com.xinbo.cloud.common.dto.common.GameAddressDto;
 import com.xinbo.cloud.common.dto.common.MerchantDto;
-import com.xinbo.cloud.common.dto.common.UserBalanceOperationDto;
+import com.xinbo.cloud.common.dto.statistics.SportActiveUserOperationDto;
+import com.xinbo.cloud.common.dto.statistics.UserBalanceOperationDto;
 import com.xinbo.cloud.common.enums.UserStatusEnum;
 import com.xinbo.cloud.common.enums.UserTypeEnum;
 import com.xinbo.cloud.common.enums.MoneyChangeEnum;
@@ -31,7 +31,6 @@ import com.xinbo.cloud.common.enums.PlatGameTypeEnum;
 import com.xinbo.cloud.common.library.DesEncrypt;
 import com.xinbo.cloud.common.library.DistributedLock;
 import com.xinbo.cloud.common.service.library.rocketmq.RocketMQService;
-import com.xinbo.cloud.common.utils.JsonUtil;
 import com.xinbo.cloud.common.vo.common.UpdateUserInfoMoneyVo;
 import com.xinbo.cloud.common.vo.common.UserInfoVo;
 import com.xinbo.cloud.common.vo.common.UserMoneyFlowVo;
@@ -49,12 +48,12 @@ import org.apache.rocketmq.client.producer.SendStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
@@ -158,13 +157,13 @@ public class PlatformApiController {
         if (merchantActionResult.getCode() != ApiStatus.SUCCESS) {
             return ResultFactory.error("渠道不存在");
         }
-        MerchantDto merchant = Convert.convert(MerchantDto.class,merchantActionResult.getData());
+        MerchantDto merchant = Convert.convert(MerchantDto.class, merchantActionResult.getData());
 
         //Step 2: 验证签名
-        boolean isValidate = PlatformApiCommon.validateSign(createAccountVo, merchant.getMerchantKey());
-        if (!isValidate) {
-            return ResultFactory.error("验证签名失败");
-        }
+        //boolean isValidate = PlatformApiCommon.validateSign(createAccountVo, merchant.getMerchantKey());
+//        if (!isValidate) {
+//            return ResultFactory.error("验证签名失败");
+//        }
         //Step 3: 添加用户
         String ip = NetUtil.getLocalhostStr();
         UserInfo userinfo = UserInfo.builder().userName(createAccountVo.getUsername()).merchantCode(merchant.getMerchantCode())
@@ -175,30 +174,34 @@ public class PlatformApiController {
         if (actionResult.getCode() != ApiStatus.SUCCESS) {
             log.info("添加用户失败，原因：{}", actionResult.getMsg());
         }
-        UserInfoDto userInfoDto = Convert.convert(UserInfoDto.class,actionResult.getData());
+        UserInfoDto userInfoDto = Convert.convert(UserInfoDto.class, actionResult.getData());
 
         //Step 4：用户活跃统计初使化
-        SportActiveUserStatistics sportActiveUserStatistics = SportActiveUserStatistics.builder().merchantCode(merchant.getMerchantCode())
-                .merchantName(merchant.getMerchantName()).userName(createAccountVo.getUsername()).day(new Date()).regIp(ip).regTime(new Date())
+        SportActiveUserOperationDto sportActiveUserOperationDto = SportActiveUserOperationDto.builder().merchantCode(merchant.getMerchantCode())
+                .merchantName(merchant.getMerchantName()).userName(userInfoDto.getUserName()).operationTime(new Date()).ip(ip)
                 .dataNode(merchant.getDataNode()).build();
-        setRocketSportActiveUserInto(sportActiveUserStatistics);
+        RocketMQConfig rocketMQConfig = RocketMQConfig.builder().nameServer(nameServer).producerGroup(producerGroup)
+                .producerTimeout(producerTimeout).producerTopic(RocketMQTopic.STATISTICS_TOPIC).build();
+        //构建队列消息
 
+//        Function<SportActiveUserOperationDto, Boolean> transactionFunc = m -> {
+//            Boolean result = false;
+//            try {
+//                result=true;
+//            } catch (Exception ex) {
+//                log.error("余额转入失败", ex);
+//            }
+//            return result;
+//        };
+
+
+        RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(sportActiveUserOperationDto)).messageId(RocketMessageIdEnum.Sport_ActiveUserInto.getCode()).build();
+        //发送事务消息
+        SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message);
         return ResultFactory.success(userInfoDto.get_userId());
     }
 
-    private void setRocketSportActiveUserInto(SportActiveUserStatistics sportActiveUserStatistics) {
-        UserInfo userinfo = UserInfo.builder().build();
-        RocketMQConfig rocketMQConfig = RocketMQConfig.builder()
-                .nameServer(nameServer)
-                .producerGroup(producerGroup)
-                .producerTimeout(producerTimeout)
-                .producerTopic(RocketMQTopic.STATISTICS_TOPIC)
-                .build();
-        //构建队列消息
-        RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(sportActiveUserStatistics)).messageId(RocketMessageIdEnum.Sport_ActiveUserInto.getCode()).build();
-        //发送事务消息
-        SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message);
-    }
+
 
     @ApiOperation(value = "余额转入", notes = "")
     @PostMapping("translateIn")
@@ -231,14 +234,18 @@ public class PlatformApiController {
         if (!isMatch) {
             return ResultFactory.error("金额有误");
         }
-        UpdateUserInfoMoneyVo userInfoMoneyVo = UpdateUserInfoMoneyVo.builder().userName(translateRequestVo.getUsername())
+        UpdateUserInfoMoneyVo userInfoMoneyVo = UpdateUserInfoMoneyVo.builder().userName(translateRequestVo.getUsername()).merchantCode(merchant.getMerchantCode())
                 .dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial()).money(translateRequestVo.getAmount())
                 .moneyChangeEnum(MoneyChangeEnum.MoneyIn.getCode()).build();
 
         UserBalanceOperationDto balanceOperationDto = UserBalanceOperationDto.builder().userId(userInfoDto.getUserId()).userName(userInfoDto.getUserName())
-                .merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
+                .merchantName(merchant.getMerchantName()).merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
                 .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyIn.getCode())
                 .remark(MoneyChangeEnum.MoneyIn.getMsg()).operationDate(DateUtil.parse(DateUtil.today())).build();
+
+        ActionResult translateInResult1 = userService.translate(userInfoMoneyVo);
+        boolean result1 = translateInResult1.getCode() == 0;
+
 
         //Step 5: 开始转入
         String lockName = String.format(ZookeeperLockKey.USER_LOCK, "moneyIn");
@@ -325,7 +332,7 @@ public class PlatformApiController {
                 .moneyChangeEnum(MoneyChangeEnum.MoneyOut.getCode()).build();
 
         UserBalanceOperationDto balanceOperationDto = UserBalanceOperationDto.builder().userId(userInfoDto.getUserId()).userName(userInfoDto.getUserName())
-                .merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
+                .merchantName(merchant.getMerchantName()).merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
                 .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyOut.getCode())
                 .remark(MoneyChangeEnum.MoneyOut.getMsg()).operationDate(DateUtil.parse(DateUtil.today())).build();
         //Step 5: 开始转出
