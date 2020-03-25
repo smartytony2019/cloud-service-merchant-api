@@ -11,7 +11,6 @@ import tk.mybatis.spring.annotation.MapperScan;
 @SpringBootApplication(scanBasePackages = "com.xinbo.cloud")
 @EnableSwagger2
 @EnableDiscoveryClient
-@MapperScan(basePackages = "com.xinbo.cloud")
 @EnableFeignClients
 public class CloudMerchantApiApplication {
     public static void main(String[] args) {

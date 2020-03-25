@@ -2,6 +2,7 @@ package com.xinbo.cloud.service.merchant.api.service;
 
 import com.xinbo.cloud.common.dto.ActionResult;
 import com.xinbo.cloud.common.dto.JwtUser;
+import com.xinbo.cloud.service.merchant.api.service.fallback.JwtServiceFallback;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 
@@ -10,7 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
  * @date 2020/3/17 17:03
  * @desc file desc
  */
-@FeignClient(name = "cloud-service-oauth")
+@FeignClient(name = "cloud-service-oauth", fallback = JwtServiceFallback.class)
 public interface JwtService {
 
 

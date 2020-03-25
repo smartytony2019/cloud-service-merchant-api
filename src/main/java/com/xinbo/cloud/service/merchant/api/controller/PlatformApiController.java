@@ -6,6 +6,7 @@ import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.xinbo.cloud.common.config.RocketMQConfig;
 import com.xinbo.cloud.common.constant.RocketMQTopic;
@@ -29,7 +30,7 @@ import com.xinbo.cloud.common.dto.common.UserInfoDto;
 import com.xinbo.cloud.common.enums.PlatGameTypeEnum;
 import com.xinbo.cloud.common.library.DesEncrypt;
 import com.xinbo.cloud.common.library.DistributedLock;
-import com.xinbo.cloud.common.service.library.rocketmq.RocketMQService;
+import com.xinbo.cloud.common.library.rocketmq.RocketMQService;
 import com.xinbo.cloud.common.vo.common.UpdateUserInfoMoneyVo;
 import com.xinbo.cloud.common.vo.common.UserInfoVo;
 import com.xinbo.cloud.common.vo.common.UserMoneyFlowVo;
@@ -38,7 +39,7 @@ import com.xinbo.cloud.common.vo.merchanta.api.TransRecordRequestVo;
 import com.xinbo.cloud.common.vo.merchanta.api.TranslateRequestVo;
 import com.xinbo.cloud.service.merchant.api.common.PlatformApiCommon;
 import com.xinbo.cloud.service.merchant.api.service.JwtService;
-import com.xinbo.cloud.service.merchant.api.service.MerchantServiceInterface;
+import com.xinbo.cloud.service.merchant.api.service.MerchantService;
 import com.xinbo.cloud.service.merchant.api.service.UserService;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -74,7 +75,7 @@ public class PlatformApiController {
     private UserService userService;
     @Autowired
     @SuppressWarnings("all")
-    private MerchantServiceInterface merchantService;
+    private MerchantService merchantService;
 
     @Autowired
     @SuppressWarnings("all")
@@ -105,15 +106,15 @@ public class PlatformApiController {
         //Step 2: 验证渠道号
         ActionResult merchantActionResult = merchantService.getByMerchantCode(playGameVo.getChannel());
         if (merchantActionResult.getCode() != ApiStatus.SUCCESS) {
-            return ResultFactory.error("渠道不存在");
+            return ResultFactory.error(merchantActionResult.getCode(), merchantActionResult.getMsg());
         }
         MerchantDto merchant = Convert.convert(MerchantDto.class,merchantActionResult.getData());
 
         //Step 3: 验证签名
-        boolean isValidate = PlatformApiCommon.validateSign(playGameVo, merchant.getMerchantKey());
+        /*boolean isValidate = PlatformApiCommon.validateSign(playGameVo, merchant.getMerchantKey());
         if (!isValidate) {
             return ResultFactory.error("验证签名失败");
-        }
+        }*/
 
         //Step 4: 验证用户
         UserInfoVo userInfoVo = UserInfoVo.builder().userName(playGameVo.getUsername()).dataNode(merchant.getDataNode()).build();
@@ -444,4 +445,14 @@ public class PlatformApiController {
         ActionResult actionResult = userService.loginOut(null);
         return actionResult;
     }
+
+
+    @ApiOperation(value = "测试", notes = "")
+    @PostMapping("test")
+    public ActionResult test() {
+        log.debug("测试日志");
+        return ResultFactory.success();
+    }
+
+
 }
