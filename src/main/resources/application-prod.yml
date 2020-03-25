@@ -32,9 +32,7 @@ spring:
 logging:
   level:
     com.xinbo: debug
-  file:
-    max-size: 5MB
-  path: ./logs/
+  file: ./logs/debug.log
 
 
 zookeeper:
@@ -45,3 +43,4 @@ rocketmq:
   name-server: 45.125.218.106:9876
   producer-group: sport_rocketmq_producer_group
   producer-timeout: 300000
+
