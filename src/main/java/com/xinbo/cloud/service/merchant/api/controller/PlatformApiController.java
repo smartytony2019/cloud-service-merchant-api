@@ -6,7 +6,6 @@ import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.xinbo.cloud.common.config.RocketMQConfig;
 import com.xinbo.cloud.common.constant.RocketMQTopic;
@@ -195,11 +194,7 @@ public class PlatformApiController {
     @PostMapping("translateIn")
     public ActionResult translateIn(@Valid @RequestBody TranslateRequestVo translateRequestVo) {
         //Step 1: 验证渠道号
-        ActionResult merchantActionResult = merchantService.getByMerchantCode(translateRequestVo.getChannel());
-        if (merchantActionResult.getCode() != ApiStatus.SUCCESS) {
-            return ResultFactory.error("渠道不存在");
-        }
-        MerchantDto merchant = Convert.convert(MerchantDto.class,merchantActionResult.getData());
+        MerchantDto merchant = PlatformApiCommon.validateMerchant(merchantService,translateRequestVo.getChannel());
 
         //Step 2: 验证签名
         boolean isValidate = PlatformApiCommon.validateSign(translateRequestVo, merchant.getMerchantKey());

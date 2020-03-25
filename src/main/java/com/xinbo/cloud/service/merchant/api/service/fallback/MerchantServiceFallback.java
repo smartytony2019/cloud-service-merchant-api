@@ -5,7 +5,6 @@ import com.xinbo.cloud.common.dto.ActionResult;
 import com.xinbo.cloud.common.dto.ResultFactory;
 import com.xinbo.cloud.service.merchant.api.service.MerchantService;
 import org.springframework.stereotype.Component;
-
 import java.text.MessageFormat;
 
 /**

@@ -3,48 +3,46 @@ server:
   servlet:
     context-path: /gw-merchant-api
 
+#Feign请求超时时间
 ribbon:
   ReadTimeout: 60000
   ConnectTimeout: 60000
 
+#开启熔断器
+feign:
+  sentinel:
+    enabled: true
+
 spring:
   application:
     name: cloud-service-merchant-api
+
   cloud:
+    #熔断器
+    sentinel:
+      transport:
+        port: ${server.port}
+        dashboard: 45.125.218.106:8002
+
+    #nacos配置
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
+
+
 logging:
   level:
-    com.xkcoding: debug
-    com.xkcoding.orm.mybatis.MapperAndPage.mapper: trace
-mybatis:
-  configuration:
-    # 下划线转驼峰
-    map-underscore-to-camel-case: true
-  mapper-locations: classpath:mappers/common/*.xml,classpath:mappers/sport/*.xml,classpath:mappers/lottery/*.xml
-  type-aliases-package: com.xinbo.cloud.common.domain
-mapper:
-  mappers:
-    - tk.mybatis.mapper.MyMapper
-  not-empty: true
-  style: camelhump
-  wrap-keyword: "`{0}`"
-  safe-delete: true
-  safe-update: true
-  identity: MYSQL
-  pagehelper:
-    auto-dialect: true
-    helper-dialect: mysql
-    reasonable: true
-    params: count=countSql
+    com.xinbo: debug
+  file:
+    max-size: 5MB
+  path: ./logs/
 
 
 zookeeper:
-  server-addr: 103.84.110.202:2181,103.84.110.202:2182,103.84.110.202:2183
+  server-addr: 45.125.218.106:2181,45.125.218.106:2182,45.125.218.106:2183
   session-timeout: 120000
 
 rocketmq:
-  name-server: 103.84.110.202:9876
+  name-server: 45.125.218.106:9876
   producer-group: sport_rocketmq_producer_group
   producer-timeout: 300000
