@@ -166,7 +166,7 @@ public class PlatformApiController {
         String ip = NetUtil.getLocalhostStr();
         UserInfo userinfo = UserInfo.builder().userName(createAccountVo.getUsername()).merchantCode(merchant.getMerchantCode())
                 .dataNode(merchant.getDataNode()).regTime(new Date()).status(UserStatusEnum.Normal.getCode())
-                .regIp(ip).loginIp(ip).money(0).frozen_money(0)
+                .regIp(ip).loginIp(ip).money(0).frozen_money(0).merchantName(merchant.getMerchantName())
                 .type(UserTypeEnum.Formal.getCode()).passWord(DesEncrypt.Encrypt("123456")).build();
         ActionResult actionResult = userService.addUser(userinfo);
         if (actionResult.getCode() != ApiStatus.SUCCESS) {
