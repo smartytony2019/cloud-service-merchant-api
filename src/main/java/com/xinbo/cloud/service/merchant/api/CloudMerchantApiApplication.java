@@ -3,11 +3,12 @@ package com.xinbo.cloud.service.merchant.api;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
-@SpringBootApplication(scanBasePackages = "com.xinbo.cloud")
+@SpringBootApplication(scanBasePackages = "com.xinbo.cloud", exclude= {DataSourceAutoConfiguration.class})
 @EnableSwagger2
 @EnableDiscoveryClient
 @EnableFeignClients
