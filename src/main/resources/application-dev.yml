@@ -22,7 +22,7 @@ spring:
     sentinel:
       transport:
         port: ${server.port}
-        dashboard: 45.125.218.106:8002
+        dashboard: 103.84.110.202:8002
 
     #nacos配置
     nacos:
