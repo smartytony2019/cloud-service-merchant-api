@@ -49,12 +49,6 @@
 
         <dependency>
             <groupId>com.xinbo</groupId>
-            <artifactId>cloud-common-dto</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.xinbo</groupId>
             <artifactId>cloud-common-vo</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
