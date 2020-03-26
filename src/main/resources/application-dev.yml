@@ -11,7 +11,7 @@ ribbon:
 #开启熔断器
 feign:
   sentinel:
-    enabled: false
+    enabled: true
 
 spring:
   application:
