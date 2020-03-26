@@ -6,7 +6,6 @@ import cn.hutool.core.util.ReUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.xinbo.cloud.common.constant.ApiStatus;
 import com.xinbo.cloud.common.dto.ActionResult;
-import com.xinbo.cloud.common.dto.ResultFactory;
 import com.xinbo.cloud.common.dto.common.MerchantDto;
 import com.xinbo.cloud.common.dto.common.UserInfoDto;
 import com.xinbo.cloud.common.utils.MapperUtil;

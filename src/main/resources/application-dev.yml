@@ -11,7 +11,7 @@ ribbon:
 #开启熔断器
 feign:
   sentinel:
-    enabled: true
+    enabled: false
 
 spring:
   application:
@@ -43,6 +43,6 @@ zookeeper:
   session-timeout: 120000
 
 rocketmq:
-  name-server: 45.125.218.106:9876
+  name-server: 103.84.110.202:9876
   producer-group: sport_rocketmq_producer_group
   producer-timeout: 300000

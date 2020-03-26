@@ -5,13 +5,14 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.RandomUtil;
-import cn.hutool.core.util.ReUtil;
 import cn.hutool.json.JSONUtil;
 import com.xinbo.cloud.common.config.RocketMQConfig;
+import com.xinbo.cloud.common.constant.CacheKey;
 import com.xinbo.cloud.common.constant.RocketMQTopic;
 import com.xinbo.cloud.common.dto.RocketMessage;
 import com.xinbo.cloud.common.dto.common.GameAddressDto;
 import com.xinbo.cloud.common.dto.common.MerchantDto;
+import com.xinbo.cloud.common.dto.common.UserToken;
 import com.xinbo.cloud.common.dto.statistics.SportActiveUserOperationDto;
 import com.xinbo.cloud.common.dto.statistics.UserBalanceOperationDto;
 import com.xinbo.cloud.common.enums.UserStatusEnum;
@@ -23,7 +24,6 @@ import com.xinbo.cloud.common.constant.ApiStatus;
 import com.xinbo.cloud.common.constant.ZookeeperLockKey;
 import com.xinbo.cloud.common.domain.common.UserInfo;
 import com.xinbo.cloud.common.dto.ActionResult;
-import com.xinbo.cloud.common.dto.JwtUser;
 import com.xinbo.cloud.common.dto.ResultFactory;
 import com.xinbo.cloud.common.dto.common.UserInfoDto;
 import com.xinbo.cloud.common.enums.PlatGameTypeEnum;
@@ -31,12 +31,13 @@ import com.xinbo.cloud.common.library.DesEncrypt;
 import com.xinbo.cloud.common.library.DistributedLock;
 import com.xinbo.cloud.common.library.rocketmq.RocketMQService;
 import com.xinbo.cloud.common.vo.common.UpdateUserInfoMoneyVo;
-import com.xinbo.cloud.common.vo.common.UserInfoVo;
 import com.xinbo.cloud.common.vo.common.UserMoneyFlowVo;
+import com.xinbo.cloud.common.vo.library.cache.StringVo;
 import com.xinbo.cloud.common.vo.merchanta.api.PlatformApiRequestVo;
 import com.xinbo.cloud.common.vo.merchanta.api.TransRecordRequestVo;
 import com.xinbo.cloud.common.vo.merchanta.api.TranslateRequestVo;
 import com.xinbo.cloud.service.merchant.api.common.PlatformApiCommon;
+import com.xinbo.cloud.service.merchant.api.service.CacheService;
 import com.xinbo.cloud.service.merchant.api.service.JwtService;
 import com.xinbo.cloud.service.merchant.api.service.MerchantService;
 import com.xinbo.cloud.service.merchant.api.service.UserService;
@@ -52,9 +53,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.text.MessageFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Function;
 
 /**
@@ -81,6 +85,11 @@ public class PlatformApiController {
     @SuppressWarnings("all")
     private JwtService jwtService;
 
+    @Autowired
+    @SuppressWarnings("all")
+    private CacheService cacheService;
+
+
     @Value("${rocketmq.name-server}")
     private String nameServer;
     @Value("${rocketmq.producer-group}")
@@ -93,6 +102,9 @@ public class PlatformApiController {
 
     @Value("${zookeeper.session-timeout}")
     private int zookeeperSessionTimeout;
+
+    @Autowired
+    private HttpServletRequest request;
 
     @ApiOperation(value = "获取游戏链接", notes = "")
     @PostMapping("playGame")
@@ -126,12 +138,13 @@ public class PlatformApiController {
             String gameUrl = gameAddress.getGameUrl() + ((gameId != PlatGameTypeEnum.Lottery.getCode() && gameId != PlatGameTypeEnum.Sport.getCode()) ? "/lottery-bet/" + playGameVo.getGameId() : "");
 
             //Step 6.生成token并加入redis
-            JwtUser jwtUser = JwtUser.builder().id(userInfoDto.getUserId()).username(userInfoDto.getUserName()).dataNode(merchant.getDataNode()).build();
-            ActionResult jwtResult = jwtService.generateToken(jwtUser);
-            if (jwtResult.getCode() != ApiStatus.SUCCESS) {
-                return ResultFactory.error("加密失败");
-            }
-            String token = jwtResult.getData().toString();
+            String token = UUID.randomUUID().toString();
+            UserToken userToken = UserToken.builder().merchantCode(merchant.getMerchantCode()).token(token).time(new Date())
+                    .userId(userInfoDto.getUserId()).dataNode(merchant.getDataNode()).userName(userInfoDto.getUserName()).build();
+
+            String userTokenKey = MessageFormat.format("{0}:{1}", CacheKey.UserTokenKey, token);
+            cacheService.stringSet(StringVo.builder().key(userTokenKey).value(userToken).expire(3600).build());
+
             //Step 7.生成最后的游戏链接
             gameUrl += "?token=" + token;
             return ResultFactory.success(gameUrl);
@@ -153,33 +166,44 @@ public class PlatformApiController {
 
             //Step 3: 添加用户
             String ip = NetUtil.getLocalhostStr();
-            UserInfo userinfo = UserInfo.builder().userName(createAccountVo.getUsername()).merchantCode(merchant.getMerchantCode())
+            UserInfo userinfo = UserInfo.builder().userName(createAccountVo.getUsername()).
+                    merchantCode(merchant.getMerchantCode()).merchantName(merchant.getMerchantName())
                     .dataNode(merchant.getDataNode()).regTime(new Date()).status(UserStatusEnum.Normal.getCode())
-                    .regIp(ip).loginIp(ip).money(0).frozen_money(0).merchantName(merchant.getMerchantName())
+                    .regIp(ip).loginIp(ip).money(0).frozen_money(0)
                     .type(UserTypeEnum.Formal.getCode()).passWord(DesEncrypt.Encrypt("123456")).build();
             ActionResult actionResult = userService.addUser(userinfo);
             if (actionResult.getCode() != ApiStatus.SUCCESS) {
                 return ResultFactory.error("系统异常");
             }
             UserInfoDto userInfoDto = Convert.convert(UserInfoDto.class, actionResult.getData());
-
             //Step 4：用户活跃统计初使化
-            SportActiveUserOperationDto sportActiveUserOperationDto = SportActiveUserOperationDto.builder().merchantCode(merchant.getMerchantCode())
-                    .merchantName(merchant.getMerchantName()).userName(userInfoDto.getUserName()).operationTime(new Date()).ip(ip)
-                    .dataNode(merchant.getDataNode()).build();
-            RocketMQConfig rocketMQConfig = RocketMQConfig.builder().nameServer(nameServer).producerGroup(producerGroup)
-                    .producerTimeout(producerTimeout).producerTopic(RocketMQTopic.STATISTICS_TOPIC).build();
-            //构建队列消息
-
-            RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(sportActiveUserOperationDto)).messageId(RocketMessageIdEnum.Sport_ActiveUserInto.getCode()).build();
-            //发送事务消息
-            SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message);
+            setRocketSportActiveUserInto(userinfo);
             return ResultFactory.success(userInfoDto.get_userId());
         } catch (Exception ex) {
             return ResultFactory.error(ex.getMessage());
         }
     }
 
+    private void setRocketSportActiveUserInto(UserInfo userinfo) {
+        try {
+            SportActiveUserOperationDto sportActiveUserOperationDto = SportActiveUserOperationDto.builder().merchantCode(userinfo.getMerchantCode())
+                    .merchantName(userinfo.getMerchantName()).userName(userinfo.getUserName()).operationTime(new Date()).ip(userinfo.getRegIp())
+                    .dataNode(userinfo.getDataNode()).build();
+            RocketMQConfig rocketMQConfig = RocketMQConfig.builder().nameServer(nameServer).producerGroup(producerGroup)
+                    .producerTimeout(producerTimeout).producerTopic(RocketMQTopic.STATISTICS_TOPIC).build();
+            //构建队列消息
+
+            RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(sportActiveUserOperationDto)).messageId(RocketMessageIdEnum.Sport_ActiveUserLoginCount.getCode()).build();
+            //发送事务消息
+            SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message);
+            boolean isCommit = JSONUtil.toJsonStr(sendResult).indexOf("COMMIT_MESSAGE") != -1;
+            if (sendResult.getSendStatus() != SendStatus.SEND_OK || isCommit) {
+                log.debug("体育活跃用户登录统计初使化写入队列失败");
+            }
+        } catch (Exception ex) {
+            log.debug(MessageFormat.format("体育活跃用户登录统计初使化写入队列失败，原因：{0}", ex.toString()));
+        }
+    }
 
     @ApiOperation(value = "余额转入", notes = "")
     @PostMapping("translateIn")
@@ -240,7 +264,8 @@ public class PlatformApiController {
                 RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(balanceOperationDto)).messageId(MoneyChangeEnum.MoneyIn.getCode()).build();
                 //发送事务消息
                 SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message, userInfoMoneyVo, transactionFunc);
-                return sendResult.getSendStatus() == SendStatus.SEND_OK ? ResultFactory.success(sendResult) : ResultFactory.error();
+                boolean isCommit = JSONUtil.toJsonStr(sendResult).indexOf("COMMIT_MESSAGE") != -1;
+                return sendResult.getSendStatus() == SendStatus.SEND_OK && isCommit ? ResultFactory.success(sendResult) : ResultFactory.error();
             } finally {
                 if (lock != null) {
                     lock.unlock();
@@ -312,7 +337,8 @@ public class PlatformApiController {
                 RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(balanceOperationDto)).messageId(MoneyChangeEnum.MoneyOut.getCode()).build();
                 //发送事务消息
                 SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message, userInfoMoneyVo, transactionFunc);
-                return sendResult.getSendStatus() == SendStatus.SEND_OK ? ResultFactory.success(sendResult) : ResultFactory.error();
+                boolean isCommit = JSONUtil.toJsonStr(sendResult).indexOf("COMMIT_MESSAGE") != -1;
+                return sendResult.getSendStatus() == SendStatus.SEND_OK && isCommit ? ResultFactory.success(sendResult) : ResultFactory.error();
             } finally {
                 if (lock != null) {
                     lock.unlock();
@@ -376,8 +402,9 @@ public class PlatformApiController {
             MerchantDto merchant = PlatformApiCommon.validateMerchant(merchantService, loginOutVo.getChannel());
             //Step 2: 验证签名
             PlatformApiCommon.validateSign(loginOutVo, merchant.getMerchantKey());
-
-            ActionResult actionResult = userService.loginOut(null);
+            //Step 3: 验证用户
+            UserInfoDto userInfoDto = PlatformApiCommon.getUserInfo(userService, loginOutVo.getUsername(), merchant.getDataNode());
+            ActionResult actionResult = userService.loginOut(userInfoDto);
             return actionResult;
         } catch (Exception ex) {
             return ResultFactory.error(ex.getMessage());
@@ -387,9 +414,10 @@ public class PlatformApiController {
     @ApiOperation(value = "测试", notes = "")
     @PostMapping("test")
     public ActionResult test() {
+
+
+
         log.debug("测试日志");
         return ResultFactory.success();
     }
-
-
 }
