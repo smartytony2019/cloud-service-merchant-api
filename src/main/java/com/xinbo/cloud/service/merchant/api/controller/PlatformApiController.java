@@ -142,8 +142,8 @@ public class PlatformApiController {
             UserToken userToken = UserToken.builder().merchantCode(merchant.getMerchantCode()).token(token).time(new Date())
                     .userId(userInfoDto.getUserId()).dataNode(merchant.getDataNode()).userName(userInfoDto.getUserName()).build();
 
-            String userTokenKey = MessageFormat.format("{0}:{1}", CacheConfig.USER_TOKEN_KEY, token);
-            cacheService.stringSet(StringVo.builder().key(userTokenKey).value(userToken).expire(3600).build());
+            String userTokenKey = MessageFormat.format(CacheConfig.USER_TOKEN_KEY, token);
+            cacheService.stringSet(StringVo.builder().key(userTokenKey).value(userToken).expire(CacheConfig.ONE_HOUR).build());
 
             //Step 7.生成最后的游戏链接
             gameUrl += "?token=" + token;
