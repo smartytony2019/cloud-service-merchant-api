@@ -7,7 +7,7 @@ import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
 import com.xinbo.cloud.common.config.RocketMQConfig;
-import com.xinbo.cloud.common.constant.CacheKey;
+import com.xinbo.cloud.common.constant.CacheConfig;
 import com.xinbo.cloud.common.constant.RocketMQTopic;
 import com.xinbo.cloud.common.dto.RocketMessage;
 import com.xinbo.cloud.common.dto.common.GameAddressDto;
@@ -142,7 +142,7 @@ public class PlatformApiController {
             UserToken userToken = UserToken.builder().merchantCode(merchant.getMerchantCode()).token(token).time(new Date())
                     .userId(userInfoDto.getUserId()).dataNode(merchant.getDataNode()).userName(userInfoDto.getUserName()).build();
 
-            String userTokenKey = MessageFormat.format("{0}:{1}", CacheKey.UserTokenKey, token);
+            String userTokenKey = MessageFormat.format("{0}:{1}", CacheConfig.USER_TOKEN_KEY, token);
             cacheService.stringSet(StringVo.builder().key(userTokenKey).value(userToken).expire(3600).build());
 
             //Step 7.生成最后的游戏链接
