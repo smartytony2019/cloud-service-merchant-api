@@ -22,7 +22,7 @@ spring:
     sentinel:
       transport:
         port: ${server.port}
-        dashboard: 45.125.218.106:8002
+        dashboard: 103.84.110.202:8002
 
     #nacos配置
     nacos:
@@ -43,6 +43,6 @@ zookeeper:
   session-timeout: 120000
 
 rocketmq:
-  name-server: 45.125.218.106:9876
+  name-server: 103.84.110.202:9876
   producer-group: sport_rocketmq_producer_group
   producer-timeout: 300000

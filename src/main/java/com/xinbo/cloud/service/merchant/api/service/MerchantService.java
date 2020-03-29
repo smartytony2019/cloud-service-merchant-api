@@ -3,7 +3,6 @@ package com.xinbo.cloud.service.merchant.api.service;
 import com.xinbo.cloud.common.dto.ActionResult;
 import com.xinbo.cloud.service.merchant.api.service.fallback.MerchantServiceFallback;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 

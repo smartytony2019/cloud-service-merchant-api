@@ -2,6 +2,7 @@ package com.xinbo.cloud.service.merchant.api.service;
 
 import com.xinbo.cloud.common.domain.common.UserInfo;
 import com.xinbo.cloud.common.dto.ActionResult;
+import com.xinbo.cloud.common.dto.common.UserInfoDto;
 import com.xinbo.cloud.common.vo.common.UpdateUserInfoMoneyVo;
 import com.xinbo.cloud.common.vo.common.UserInfoVo;
 import com.xinbo.cloud.common.vo.common.UserMoneyFlowVo;
@@ -19,7 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface UserService {
     /**
      * 通过用户名称和数据接口获取用户信息
-     * @param vo   用户名：merchantKey_username
+     *
+     * @param vo 用户名：merchantKey_username
      * @return
      */
     @PostMapping("/gw-user/userInfo/getUserInfoByUserName")
@@ -27,6 +29,7 @@ public interface UserService {
 
     /**
      * 添加用户
+     *
      * @param userinfo
      * @return
      */
@@ -35,6 +38,7 @@ public interface UserService {
 
     /**
      * 余额转入转出
+     *
      * @param userInfoMoneyVo
      * @return
      */
@@ -44,6 +48,7 @@ public interface UserService {
 
     /**
      * 查询订单状态
+     *
      * @param userMoneyFlowVo
      * @return
      */
@@ -52,10 +57,11 @@ public interface UserService {
 
     /**
      * 用户登录
-     * @param userinfo
+     *
+     * @param userInfoDto
      * @return
      */
-    @PostMapping("/gw-user/userInfo/stringGet")
-    ActionResult loginOut(@RequestBody UserInfo userinfo);
+    @PostMapping("/gw-user/userInfo/administratorKicked")
+    ActionResult loginOut(@RequestBody UserInfoDto userInfoDto);
 
 }
