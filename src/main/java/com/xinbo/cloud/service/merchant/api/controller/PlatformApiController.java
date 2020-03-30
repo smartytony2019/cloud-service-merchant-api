@@ -267,7 +267,7 @@ public class PlatformApiController {
                 //发送事务消息
                 SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message, userInfoMoneyVo, transactionFunc);
                 boolean isCommit = JSONUtil.toJsonStr(sendResult).contains("COMMIT_MESSAGE");
-                return sendResult.getSendStatus() == SendStatus.SEND_OK && isCommit ? ResultFactory.success(sendResult) : ResultFactory.error();
+                return sendResult.getSendStatus() == SendStatus.SEND_OK && isCommit ? ResultFactory.success() : ResultFactory.error();
             } finally {
                 if (lock != null) {
                     lock.unlock();
@@ -340,7 +340,7 @@ public class PlatformApiController {
                 //发送事务消息
                 SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message, userInfoMoneyVo, transactionFunc);
                 boolean isCommit = JSONUtil.toJsonStr(sendResult).contains("COMMIT_MESSAGE");
-                return sendResult.getSendStatus() == SendStatus.SEND_OK && isCommit ? ResultFactory.success(sendResult) : ResultFactory.error();
+                return sendResult.getSendStatus() == SendStatus.SEND_OK && isCommit ? ResultFactory.success() : ResultFactory.error();
             } finally {
                 if (lock != null) {
                     lock.unlock();
@@ -378,12 +378,9 @@ public class PlatformApiController {
         try {
             //Step 1: 验证渠道号
             MerchantDto merchant = PlatformApiCommon.validateMerchant(merchantService, transRecordRequestVo.getChannel());
-            String username = MessageFormat.format("{0}_{1}", merchant.getMerchantCode(), transRecordRequestVo.getUsername());
             //Step 2: 验证签名
             PlatformApiCommon.validateSign(transRecordRequestVo, merchant.getMerchantKey());
-            //Step 3: 验证用户
-            UserInfoDto userInfoDto = PlatformApiCommon.getUserInfo(userService, username, merchant.getDataNode());
-            //Step 4: 验证订单
+            //Step 3: 验证订单
             UserMoneyFlowVo userMoneyFlowVo = UserMoneyFlowVo.builder().merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode())
                     .merchantSerial(transRecordRequestVo.getMerchantSerial()).build();
             ActionResult actionResult = userService.transRecord(userMoneyFlowVo);
