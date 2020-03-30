@@ -220,14 +220,14 @@ public class PlatformApiController {
 
             //Step 4: 验证金额
             PlatformApiCommon.validateMoney(translateRequestVo.getAmount());
-
+            float amount = Float.parseFloat(translateRequestVo.getAmount());
             UpdateUserInfoMoneyVo userInfoMoneyVo = UpdateUserInfoMoneyVo.builder().userName(username).merchantCode(merchant.getMerchantCode())
-                    .dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial()).money(translateRequestVo.getAmount())
+                    .dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial()).money(amount)
                     .moneyChangeEnum(MoneyChangeEnum.MoneyIn.getCode()).build();
 
             UserBalanceOperationDto balanceOperationDto = UserBalanceOperationDto.builder().userId(userInfoDto.getUserId()).userName(userInfoDto.getUserName())
                     .merchantName(merchant.getMerchantName()).merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
-                    .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyIn.getCode())
+                    .operationMoney(amount).operationType(MoneyChangeEnum.MoneyIn.getCode())
                     .remark(MoneyChangeEnum.MoneyIn.getMsg()).operationDate(DateUtil.parse(DateUtil.today())).build();
 
             //Step 5: 开始转入
@@ -294,14 +294,14 @@ public class PlatformApiController {
 
             //Step 4: 验证金额
             PlatformApiCommon.validateMoney(translateRequestVo.getAmount());
-
+            float amount = Float.parseFloat(translateRequestVo.getAmount());
             UpdateUserInfoMoneyVo userInfoMoneyVo = UpdateUserInfoMoneyVo.builder().userName(username)
-                    .dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial()).money(translateRequestVo.getAmount())
+                    .dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial()).money(amount)
                     .moneyChangeEnum(MoneyChangeEnum.MoneyOut.getCode()).build();
 
             UserBalanceOperationDto balanceOperationDto = UserBalanceOperationDto.builder().userId(userInfoDto.getUserId()).userName(userInfoDto.getUserName())
                     .merchantName(merchant.getMerchantName()).merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
-                    .operationMoney(translateRequestVo.getAmount()).operationType(MoneyChangeEnum.MoneyOut.getCode())
+                    .operationMoney(amount).operationType(MoneyChangeEnum.MoneyOut.getCode())
                     .remark(MoneyChangeEnum.MoneyOut.getMsg()).operationDate(DateUtil.parse(DateUtil.today())).build();
             //Step 5: 开始转出
             String lockName = String.format(ZookeeperLockKey.USER_LOCK, "moneyOut");
