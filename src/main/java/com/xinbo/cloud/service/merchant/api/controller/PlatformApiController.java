@@ -15,10 +15,7 @@ import com.xinbo.cloud.common.dto.common.MerchantDto;
 import com.xinbo.cloud.common.dto.common.UserToken;
 import com.xinbo.cloud.common.dto.statistics.SportActiveUserOperationDto;
 import com.xinbo.cloud.common.dto.statistics.UserBalanceOperationDto;
-import com.xinbo.cloud.common.enums.UserStatusEnum;
-import com.xinbo.cloud.common.enums.UserTypeEnum;
-import com.xinbo.cloud.common.enums.MoneyChangeEnum;
-import com.xinbo.cloud.common.enums.RocketMessageIdEnum;
+import com.xinbo.cloud.common.enums.*;
 import com.xinbo.cloud.common.config.ZookeeperConfig;
 import com.xinbo.cloud.common.constant.ApiStatus;
 import com.xinbo.cloud.common.constant.ZookeeperLockKey;
@@ -26,11 +23,11 @@ import com.xinbo.cloud.common.domain.common.UserInfo;
 import com.xinbo.cloud.common.dto.ActionResult;
 import com.xinbo.cloud.common.dto.ResultFactory;
 import com.xinbo.cloud.common.dto.common.UserInfoDto;
-import com.xinbo.cloud.common.enums.PlatGameTypeEnum;
 import com.xinbo.cloud.common.library.DesEncrypt;
 import com.xinbo.cloud.common.library.DistributedLock;
 import com.xinbo.cloud.common.library.rocketmq.RocketMQService;
 import com.xinbo.cloud.common.vo.common.UpdateUserInfoMoneyVo;
+import com.xinbo.cloud.common.vo.common.UserInfoVo;
 import com.xinbo.cloud.common.vo.common.UserMoneyFlowVo;
 import com.xinbo.cloud.common.vo.library.cache.StringVo;
 import com.xinbo.cloud.common.vo.merchanta.api.PlatformApiRequestVo;
@@ -161,35 +158,35 @@ public class PlatformApiController {
         try {
             //Step 1: 验证渠道号
             MerchantDto merchant = PlatformApiCommon.validateMerchant(merchantService, createAccountVo.getChannel());
-
+            String username = MessageFormat.format("{0}_{1}", merchant.getMerchantCode(), createAccountVo.getUsername());
             //Step 2: 验证签名
             PlatformApiCommon.validateSign(createAccountVo, merchant.getMerchantKey());
 
             //Step 3: 添加用户
             String ip = NetUtil.getLocalhostStr();
-            UserInfo userinfo = UserInfo.builder().userName(createAccountVo.getUsername()).
+            UserInfoVo userinfoVo = UserInfoVo.builder().userName(username).
                     merchantCode(merchant.getMerchantCode()).merchantName(merchant.getMerchantName())
                     .dataNode(merchant.getDataNode()).regTime(new Date()).status(UserStatusEnum.Normal.getCode())
                     .regIp(ip).loginIp(ip).money(0).frozen_money(0)
                     .type(UserTypeEnum.Formal.getCode()).passWord(DesEncrypt.Encrypt("123456")).build();
-            ActionResult actionResult = userService.addUser(userinfo);
+            ActionResult actionResult = userService.addUser(userinfoVo);
             if (actionResult.getCode() != ApiStatus.SUCCESS) {
                 return ResultFactory.error("系统异常");
             }
             UserInfoDto userInfoDto = Convert.convert(UserInfoDto.class, actionResult.getData());
             //Step 4：用户活跃统计初使化
-            setRocketSportActiveUserInto(userinfo);
+            setRocketSportActiveUserInto(userinfoVo);
             return ResultFactory.success(userInfoDto.get_userId());
         } catch (Exception ex) {
             return ResultFactory.error(ex.getMessage());
         }
     }
 
-    private void setRocketSportActiveUserInto(UserInfo userinfo) {
+    private void setRocketSportActiveUserInto(UserInfoVo userinfoVo) {
         try {
-            SportActiveUserOperationDto sportActiveUserOperationDto = SportActiveUserOperationDto.builder().merchantCode(userinfo.getMerchantCode())
-                    .merchantName(userinfo.getMerchantName()).userName(userinfo.getUserName()).operationTime(new Date()).ip(userinfo.getRegIp())
-                    .dataNode(userinfo.getDataNode()).build();
+            SportActiveUserOperationDto sportActiveUserOperationDto = SportActiveUserOperationDto.builder().merchantCode(userinfoVo.getMerchantCode())
+                    .merchantName(userinfoVo.getMerchantName()).userName(userinfoVo.getUserName()).operationTime(new Date()).ip(userinfoVo.getRegIp())
+                    .dataNode(userinfoVo.getDataNode()).build();
             RocketMQConfig rocketMQConfig = RocketMQConfig.builder().nameServer(nameServer).producerGroup(producerGroup)
                     .producerTimeout(producerTimeout).producerTopic(RocketMQTopic.STATISTICS_TOPIC).build();
             //构建队列消息
@@ -221,6 +218,11 @@ public class PlatformApiController {
             //Step 4: 验证金额
             PlatformApiCommon.validateMoney(translateRequestVo.getAmount());
             float amount = Float.parseFloat(translateRequestVo.getAmount());
+
+            //Step 5: 验证订单是否存在
+            PlatformApiCommon.validateSerial(userService, translateRequestVo.getMerchantSerial(), merchant.getMerchantCode(), merchant.getDataNode());
+
+            //Step 6: 开始转入
             UpdateUserInfoMoneyVo userInfoMoneyVo = UpdateUserInfoMoneyVo.builder().userName(username).merchantCode(merchant.getMerchantCode())
                     .dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial()).money(amount)
                     .moneyChangeEnum(MoneyChangeEnum.MoneyIn.getCode()).build();
@@ -230,7 +232,6 @@ public class PlatformApiController {
                     .operationMoney(amount).operationType(MoneyChangeEnum.MoneyIn.getCode())
                     .remark(MoneyChangeEnum.MoneyIn.getMsg()).operationDate(DateUtil.parse(DateUtil.today())).build();
 
-            //Step 5: 开始转入
             String lockName = String.format(ZookeeperLockKey.USER_LOCK, "moneyIn");
             ZookeeperConfig config = ZookeeperConfig.builder()
                     .serverAddr(zookeeperServerAddr)
@@ -295,6 +296,11 @@ public class PlatformApiController {
             //Step 4: 验证金额
             PlatformApiCommon.validateMoney(translateRequestVo.getAmount());
             float amount = Float.parseFloat(translateRequestVo.getAmount());
+
+            //Step 5: 验证订单是否存在
+            PlatformApiCommon.validateSerial(userService, translateRequestVo.getMerchantSerial(), merchant.getMerchantCode(), merchant.getDataNode());
+
+            //Step 6: 开始转出
             UpdateUserInfoMoneyVo userInfoMoneyVo = UpdateUserInfoMoneyVo.builder().userName(username)
                     .dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial()).money(amount)
                     .moneyChangeEnum(MoneyChangeEnum.MoneyOut.getCode()).build();
@@ -303,7 +309,7 @@ public class PlatformApiController {
                     .merchantName(merchant.getMerchantName()).merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial())
                     .operationMoney(amount).operationType(MoneyChangeEnum.MoneyOut.getCode())
                     .remark(MoneyChangeEnum.MoneyOut.getMsg()).operationDate(DateUtil.parse(DateUtil.today())).build();
-            //Step 5: 开始转出
+
             String lockName = String.format(ZookeeperLockKey.USER_LOCK, "moneyOut");
             ZookeeperConfig config = ZookeeperConfig.builder()
                     .serverAddr(zookeeperServerAddr)
@@ -371,23 +377,17 @@ public class PlatformApiController {
     }
 
 
-    @ApiOperation(value = "查询订单状态", notes = "")
+    @ApiOperation(value = "查询订单状态(0:成功 1：失败 2:未知)", notes = "")
     @PostMapping("transRecord")
     public ActionResult transRecord(@Valid @RequestBody TransRecordRequestVo transRecordRequestVo) {
-
         try {
             //Step 1: 验证渠道号
             MerchantDto merchant = PlatformApiCommon.validateMerchant(merchantService, transRecordRequestVo.getChannel());
             //Step 2: 验证签名
             PlatformApiCommon.validateSign(transRecordRequestVo, merchant.getMerchantKey());
             //Step 3: 验证订单
-            UserMoneyFlowVo userMoneyFlowVo = UserMoneyFlowVo.builder().merchantCode(merchant.getMerchantCode()).dataNode(merchant.getDataNode())
-                    .merchantSerial(transRecordRequestVo.getMerchantSerial()).build();
-            ActionResult actionResult = userService.transRecord(userMoneyFlowVo);
-            if (actionResult.getCode() != ApiStatus.SUCCESS) {
-                return ResultFactory.error(actionResult.getMsg());
-            }
-            return ResultFactory.success();
+            TransferStatusEnum transferStatusEnum = PlatformApiCommon.orderIsExist(userService, transRecordRequestVo.getMerchantSerial(), merchant.getMerchantCode(), merchant.getDataNode());
+            return transferStatusEnum == TransferStatusEnum.Success ? ResultFactory.success() : ResultFactory.error(transferStatusEnum.getMsg());
         } catch (Exception ex) {
             return ResultFactory.error(ex.getMessage());
         }
@@ -405,19 +405,11 @@ public class PlatformApiController {
             PlatformApiCommon.validateSign(loginOutVo, merchant.getMerchantKey());
             //Step 3: 验证用户
             UserInfoDto userInfoDto = PlatformApiCommon.getUserInfo(userService, username, merchant.getDataNode());
-            ActionResult actionResult = userService.loginOut(userInfoDto);
+            UserInfoVo userInfoVo = UserInfoVo.builder().userName(userInfoDto.getUserName()).build();
+            ActionResult actionResult = userService.loginOut(userInfoVo);
             return actionResult;
         } catch (Exception ex) {
             return ResultFactory.error(ex.getMessage());
         }
-    }
-
-    @ApiOperation(value = "测试", notes = "")
-    @PostMapping("test")
-    public ActionResult test() {
-
-
-        log.debug("测试日志");
-        return ResultFactory.success();
     }
 }

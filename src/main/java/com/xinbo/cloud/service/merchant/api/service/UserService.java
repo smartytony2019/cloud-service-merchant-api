@@ -1,6 +1,7 @@
 package com.xinbo.cloud.service.merchant.api.service;
 
 import com.xinbo.cloud.common.domain.common.UserInfo;
+import com.xinbo.cloud.common.domain.common.UserMoneyFlow;
 import com.xinbo.cloud.common.dto.ActionResult;
 import com.xinbo.cloud.common.dto.common.UserInfoDto;
 import com.xinbo.cloud.common.vo.common.UpdateUserInfoMoneyVo;
@@ -30,11 +31,11 @@ public interface UserService {
     /**
      * 添加用户
      *
-     * @param userinfo
+     * @param userInfoVo
      * @return
      */
     @PostMapping("/gw-user/userInfo/insertUserInfo")
-    ActionResult addUser(UserInfo userinfo);
+    ActionResult addUser(UserInfoVo userInfoVo);
 
     /**
      * 余额转入转出
@@ -49,19 +50,19 @@ public interface UserService {
     /**
      * 查询订单状态
      *
-     * @param userMoneyFlowVo
+     * @param vo
      * @return
      */
-    @PostMapping("/gw-user/userInfo/getTranslateIsSuccess")
-    ActionResult transRecord(@RequestBody UserMoneyFlowVo userMoneyFlowVo);
+    @PostMapping("/gw-user/userInfo/getTransferIsSuccess")
+    ActionResult transRecord(@RequestBody UserMoneyFlowVo vo);
 
     /**
      * 用户登录
      *
-     * @param userInfoDto
+     * @param userInfoVo
      * @return
      */
     @PostMapping("/gw-user/userInfo/administratorKicked")
-    ActionResult loginOut(@RequestBody UserInfoDto userInfoDto);
+    ActionResult loginOut(@RequestBody UserInfoVo userInfoVo);
 
 }

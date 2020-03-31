@@ -1,10 +1,9 @@
 package com.xinbo.cloud.service.merchant.api.service.fallback;
 
 import com.xinbo.cloud.common.constant.FallbackMessage;
-import com.xinbo.cloud.common.domain.common.UserInfo;
+import com.xinbo.cloud.common.domain.common.UserMoneyFlow;
 import com.xinbo.cloud.common.dto.ActionResult;
 import com.xinbo.cloud.common.dto.ResultFactory;
-import com.xinbo.cloud.common.dto.common.UserInfoDto;
 import com.xinbo.cloud.common.vo.common.UpdateUserInfoMoneyVo;
 import com.xinbo.cloud.common.vo.common.UserInfoVo;
 import com.xinbo.cloud.common.vo.common.UserMoneyFlowVo;
@@ -28,7 +27,7 @@ public class UserServiceFallback implements UserService {
     }
 
     @Override
-    public ActionResult addUser(UserInfo userinfo) {
+    public ActionResult addUser(UserInfoVo userInfoVo) {
         return ResultFactory.fallback(MessageFormat.format(FallbackMessage.MSG_FORMAT, UserService.class.getSimpleName()));
     }
 
@@ -38,12 +37,12 @@ public class UserServiceFallback implements UserService {
     }
 
     @Override
-    public ActionResult transRecord(UserMoneyFlowVo userMoneyFlowVo) {
+    public ActionResult transRecord(UserMoneyFlowVo vo) {
         return ResultFactory.fallback(MessageFormat.format(FallbackMessage.MSG_FORMAT, UserService.class.getSimpleName()));
     }
 
     @Override
-    public ActionResult loginOut(UserInfoDto userInfoDto) {
+    public ActionResult loginOut(UserInfoVo userInfoVo) {
         return ResultFactory.fallback(MessageFormat.format(FallbackMessage.MSG_FORMAT, UserService.class.getSimpleName()));
     }
 }

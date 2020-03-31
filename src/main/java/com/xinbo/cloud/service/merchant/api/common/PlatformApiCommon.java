@@ -10,10 +10,12 @@ import com.xinbo.cloud.common.dto.common.MerchantDto;
 import com.xinbo.cloud.common.dto.common.UserInfoDto;
 import com.xinbo.cloud.common.utils.MapperUtil;
 import com.xinbo.cloud.common.vo.common.UserInfoVo;
+import com.xinbo.cloud.common.vo.common.UserMoneyFlowVo;
 import com.xinbo.cloud.service.merchant.api.service.MerchantService;
 import com.xinbo.cloud.service.merchant.api.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import com.xinbo.cloud.common.enums.TransferStatusEnum;
 
 import java.text.MessageFormat;
 import java.util.Map;
@@ -63,6 +65,37 @@ public class PlatformApiCommon {
         } catch (Exception ex) {
             throw new RuntimeException("金额有误");
         }
+    }
+
+    /**
+     * @param userService
+     * @param merchantSerial
+     * @param merchantCode
+     * @param dataNode
+     */
+    public static TransferStatusEnum orderIsExist(UserService userService, String merchantSerial, String merchantCode, int dataNode) {
+        UserMoneyFlowVo userMoneyFlowVo = UserMoneyFlowVo.builder().merchantCode(merchantCode).dataNode(dataNode)
+                .merchantSerial(merchantSerial).build();
+        ActionResult result = userService.transRecord(userMoneyFlowVo);
+        if (result.getCode() == ApiStatus.FALLBACK) {
+            throw new RuntimeException(result.getMsg());
+        }
+        if (result.getCode() != ApiStatus.SUCCESS) {
+            throw new RuntimeException("查询订单状态失败");
+        }
+        return TransferStatusEnum.valueOf(Integer.parseInt(result.getData().toString()));
+    }
+
+    /**
+     * @param userService
+     * @param merchantSerial
+     * @param merchantCode
+     * @param dataNode
+     */
+    public static void validateSerial(UserService userService, String merchantSerial, String merchantCode, int dataNode) {
+        TransferStatusEnum transferStatusEnum = orderIsExist(userService, merchantSerial, merchantCode, dataNode);
+        if (transferStatusEnum == TransferStatusEnum.Success)
+            throw new RuntimeException("订单已存在");
     }
 
     /**
