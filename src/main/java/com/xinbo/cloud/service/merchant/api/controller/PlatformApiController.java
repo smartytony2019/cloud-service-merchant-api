@@ -166,12 +166,14 @@ public class PlatformApiController {
             String ip = NetUtil.getLocalhostStr();
             UserInfoVo userinfoVo = UserInfoVo.builder().userName(username).
                     merchantCode(merchant.getMerchantCode()).merchantName(merchant.getMerchantName())
-                    .dataNode(merchant.getDataNode()).regTime(new Date()).status(UserStatusEnum.Normal.getCode())
-                    .regIp(ip).loginIp(ip).money(0).frozen_money(0)
+                    .dataNode(merchant.getDataNode()).regIp(ip).loginIp(ip)
                     .type(UserTypeEnum.Formal.getCode()).passWord(DesEncrypt.Encrypt("123456")).build();
             ActionResult actionResult = userService.addUser(userinfoVo);
+            if (actionResult.getCode() == ApiStatus.FALLBACK) {
+                throw new RuntimeException(actionResult.getMsg());
+            }
             if (actionResult.getCode() != ApiStatus.SUCCESS) {
-                return ResultFactory.error("系统异常");
+                return ResultFactory.error("创建用户失败");
             }
             UserInfoDto userInfoDto = Convert.convert(UserInfoDto.class, actionResult.getData());
             //Step 4：用户活跃统计初使化
@@ -191,7 +193,7 @@ public class PlatformApiController {
                     .producerTimeout(producerTimeout).producerTopic(RocketMQTopic.STATISTICS_TOPIC).build();
             //构建队列消息
 
-            RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(sportActiveUserOperationDto)).messageId(RocketMessageIdEnum.Sport_ActiveUserLoginCount.getCode()).build();
+            RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(sportActiveUserOperationDto)).messageId(RocketMessageIdEnum.Sport_ActiveUserInto.getCode()).build();
             //发送事务消息
             SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message);
             boolean isCommit = JSONUtil.toJsonStr(sendResult).indexOf("COMMIT_MESSAGE") != -1;
