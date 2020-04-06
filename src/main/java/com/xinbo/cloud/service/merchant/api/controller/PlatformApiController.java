@@ -218,7 +218,7 @@ public class PlatformApiController {
             PlatformApiCommon.validateSerial(userServiceApi, translateRequestVo.getMerchantSerial(), merchant.getMerchantCode(), merchant.getDataNode());
 
             //Step 6: 开始转入
-            UpdateUserInfoMoneyVo userInfoMoneyVo = UpdateUserInfoMoneyVo.builder().userName(username).merchantCode(merchant.getMerchantCode())
+            UpdateUserInfoMoneyVo userInfoMoneyVo = UpdateUserInfoMoneyVo.builder().userId(userInfoDto.getUserId()).merchantCode(merchant.getMerchantCode())
                     .dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial()).money(amount)
                     .moneyChangeEnum(MoneyChangeEnum.MoneyIn.getCode()).build();
 
@@ -295,7 +295,7 @@ public class PlatformApiController {
             PlatformApiCommon.validateSerial(userServiceApi, translateRequestVo.getMerchantSerial(), merchant.getMerchantCode(), merchant.getDataNode());
 
             //Step 6: 开始转出
-            UpdateUserInfoMoneyVo userInfoMoneyVo = UpdateUserInfoMoneyVo.builder().userName(username)
+            UpdateUserInfoMoneyVo userInfoMoneyVo = UpdateUserInfoMoneyVo.builder().userId(userInfoDto.getUserId())
                     .dataNode(merchant.getDataNode()).merchantSerial(translateRequestVo.getMerchantSerial()).money(amount)
                     .moneyChangeEnum(MoneyChangeEnum.MoneyOut.getCode()).build();
 
