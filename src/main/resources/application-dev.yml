@@ -8,36 +8,30 @@ ribbon:
   ReadTimeout: 60000
   ConnectTimeout: 60000
 
-#开启熔断器
-feign:
-  sentinel:
-    enabled: true
-
 spring:
   application:
     name: cloud-service-merchant-api
-
-  cloud:
-    #熔断器
-    sentinel:
-      transport:
-        port: ${server.port}
-        dashboard: 103.84.110.202:8002
-
-    #nacos配置
-    nacos:
-      discovery:
-        server-addr: 127.0.0.1:8848
-
-
 logging:
   level:
     com.xinbo: debug
   file:
     max-size: 5MB
   path: ./logs/
-
-
+dubbo:
+  provider:
+    cluster: FailFast
+    timeout: 3000
+  consumer:
+    check: false
+    timeout: 3000
+  application:
+    name: ${spring.application.name}
+  protocol:
+    name: dubbo
+    port: -1
+    serialization: kryo
+  registry:
+    address: nacos://127.0.0.1:8848
 zookeeper:
   server-addr: 45.125.218.106:2181,45.125.218.106:2182,45.125.218.106:2183
   session-timeout: 120000

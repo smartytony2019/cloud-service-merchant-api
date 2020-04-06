@@ -22,12 +22,12 @@ spring:
     sentinel:
       transport:
         port: ${server.port}
-        dashboard: 45.125.218.106:8002
+        dashboard: 192.168.30.150:8002
 
     #nacos配置
     nacos:
       discovery:
-        server-addr: 45.125.218.106:8848
+        server-addr: 192.168.30.150:8848
 
 logging:
   level:
