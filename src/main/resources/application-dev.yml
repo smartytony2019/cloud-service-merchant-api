@@ -1,27 +1,20 @@
 server:
   port: 13000
-
-
 spring:
   application:
     name: cloud-service-merchant-api
-
   cloud:
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
-
     sentinel:
       transport:
         dashboard: 127.0.0.1:8080
-
-
 logging:
   level:
     com.xinbo: debug
   file:
     max-size: 5MB
-
 dubbo:
   scan:
     base-packages: com.xinbo.cloud.service.merchant.api
@@ -34,13 +27,9 @@ dubbo:
   registry:
     address: nacos://127.0.0.1:8848
     check: false
-
-
-
 zookeeper:
   server-addr: 45.125.218.106:2181,45.125.218.106:2182,45.125.218.106:2183
   session-timeout: 120000
-
 rocketmq:
   name-server: 103.84.110.202:9876
   producer-group: sport_rocketmq_producer_group
