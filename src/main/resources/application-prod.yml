@@ -1,38 +1,40 @@
 server:
   port: 13000
-  servlet:
-    context-path: /gw-merchant-api
 
-#Feign请求超时时间
-ribbon:
-  ReadTimeout: 60000
-  ConnectTimeout: 60000
-
-#开启熔断器
-feign:
-  sentinel:
-    enabled: true
 
 spring:
   application:
     name: cloud-service-merchant-api
 
   cloud:
-    #熔断器
-    sentinel:
-      transport:
-        port: ${server.port}
-        dashboard: 192.168.30.150:8002
-
-    #nacos配置
     nacos:
       discovery:
         server-addr: 192.168.30.150:8848
 
+    sentinel:
+      transport:
+        dashboard: 192.168.30.150:8080
+
+
 logging:
   level:
     com.xinbo: debug
-  file: ./logs/debug.log
+  file:
+    max-size: 5MB
+
+dubbo:
+  scan:
+    base-packages: com.xinbo.cloud.service.merchant.api
+  protocol:
+    name: dubbo
+    port: -1
+  consumer:
+    check: false
+    generic: false
+  registry:
+    address: nacos://127.0.0.1:8848
+    check: false
+
 
 
 zookeeper:
@@ -40,7 +42,6 @@ zookeeper:
   session-timeout: 120000
 
 rocketmq:
-  name-server: 45.125.218.106:9876
+  name-server: 103.84.110.202:9876
   producer-group: sport_rocketmq_producer_group
   producer-timeout: 300000
-

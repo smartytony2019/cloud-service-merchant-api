@@ -1,37 +1,42 @@
 server:
   port: 13000
-  servlet:
-    context-path: /gw-merchant-api
 
-#Feign请求超时时间
-ribbon:
-  ReadTimeout: 60000
-  ConnectTimeout: 60000
 
 spring:
   application:
     name: cloud-service-merchant-api
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+
+    sentinel:
+      transport:
+        dashboard: 127.0.0.1:8080
+
+
 logging:
   level:
     com.xinbo: debug
   file:
     max-size: 5MB
-  path: ./logs/
+
 dubbo:
-  provider:
-    cluster: FailFast
-    timeout: 3000
-  consumer:
-    check: false
-    timeout: 3000
-  application:
-    name: ${spring.application.name}
+  scan:
+    base-packages: com.xinbo.cloud.service.merchant.api
   protocol:
     name: dubbo
     port: -1
-    serialization: kryo
+  consumer:
+    check: false
+    generic: false
   registry:
     address: nacos://127.0.0.1:8848
+    check: false
+
+
+
 zookeeper:
   server-addr: 45.125.218.106:2181,45.125.218.106:2182,45.125.218.106:2183
   session-timeout: 120000
