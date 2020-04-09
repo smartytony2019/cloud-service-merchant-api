@@ -229,7 +229,6 @@ public class PlatformApiController {
                     .sessionTimeout(zookeeperSessionTimeout)
                     .lockName(lockName)
                     .build();
-
             DistributedLock lock = null;
             try {
                 lock = new DistributedLock(config);

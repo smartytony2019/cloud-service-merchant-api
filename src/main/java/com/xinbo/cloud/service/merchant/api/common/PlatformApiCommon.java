@@ -13,14 +13,13 @@ import com.xinbo.cloud.common.utils.MapperUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import com.xinbo.cloud.common.enums.TransferStatusEnum;
-
 import java.text.MessageFormat;
 import java.util.Map;
 
 /**
  * @author 汉斯
  * @date 2020/3/23 13:40
- * @desc file desc
+ * @desc 商户对接接口通用方法类
  */
 @Slf4j
 public class PlatformApiCommon {
@@ -33,16 +32,16 @@ public class PlatformApiCommon {
      * @return
      */
     public static void validateSign(Object obj, String merchantKey) {
-//        Map map = MapperUtil.to(obj, Map.class);
-//        String strSign = MapUtil.getStr(map, "sign");
-//        map.remove("sign");
-//        String str = StringUtils.join(MapUtil.sort(map).values(), "");
-//        str += merchantKey;
-//        String strMd5 = DigestUtil.md5Hex(str).toLowerCase();
-//        if (!strSign.equals(strMd5)) {
-//            log.debug(MessageFormat.format("验证签名失败,签名字符串：{0},签名结果：{1},第三方签名串:{2}", str, strMd5, strSign));
-//            throw new RuntimeException("验证签名失败");
-//        }
+        Map map = MapperUtil.to(obj, Map.class);
+        String strSign = MapUtil.getStr(map, "sign");
+        map.remove("sign");
+        String str = StringUtils.join(MapUtil.sort(map).values(), "");
+        str += merchantKey;
+        String strMd5 = DigestUtil.md5Hex(str).toLowerCase();
+        if (!strSign.equals(strMd5)) {
+            log.debug(MessageFormat.format("验证签名失败,签名字符串：{0},签名结果：{1},第三方签名串:{2}", str, strMd5, strSign));
+            throw new RuntimeException("验证签名失败");
+        }
     }
 
     /**
@@ -87,7 +86,7 @@ public class PlatformApiCommon {
     public static void validateSerial(UserServiceApi userServiceApi, String merchantSerial, String merchantCode, int dataNode) {
         TransferStatusEnum transferStatusEnum = orderIsExist(userServiceApi, merchantSerial, merchantCode, dataNode);
         if (transferStatusEnum == TransferStatusEnum.Success)
-            throw new RuntimeException("订单已存在");
+            throw new RuntimeException("订单号已存在");
     }
 
     /**
@@ -105,6 +104,13 @@ public class PlatformApiCommon {
     }
 
 
+    /**
+     * 验证用户是否存在，并返回用户信息
+     * @param userServiceApi
+     * @param username
+     * @param dataNode
+     * @return
+     */
     public static UserInfoDto getUserInfo(UserServiceApi userServiceApi, String username, int dataNode) {
         UserInfo userInfo = UserInfo.builder().userName(username).dataNode(dataNode).build();
         UserInfoDto dto = userServiceApi.getUserInfoByUserName(userInfo);
