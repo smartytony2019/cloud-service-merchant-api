@@ -3,6 +3,7 @@ package com.xinbo.cloud.service.merchant.api.controller;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.xinbo.cloud.common.config.RocketMQConfig;
 import com.xinbo.cloud.common.constant.CacheConfig;
@@ -163,6 +164,9 @@ public class PlatformApiController {
                     .type(UserTypeEnum.Formal.getCode()).passWord(DesEncrypt.Encrypt("123456")).build();
             UserInfoDto userInfoDto = userServiceApi.insertUserInfo(userinfo);
             if (userInfoDto == null) {
+                return ResultFactory.error("创建用户失败");
+            }
+            if (StrUtil.isBlank(userInfoDto.get_userId())) {
                 return ResultFactory.error("创建用户失败");
             }
             //Step 4：用户活跃统计初使化
