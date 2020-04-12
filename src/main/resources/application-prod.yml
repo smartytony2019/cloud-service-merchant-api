@@ -28,9 +28,9 @@ dubbo:
     address: 192.168.30.150:8848
     check: false
 zookeeper:
-  server-addr: 45.125.218.106:2181,45.125.218.106:2182,45.125.218.106:2183
+  server-addr: 192.168.30.150:2181,192.168.30.150:2182,192.168.30.150:2183
   session-timeout: 120000
 rocketmq:
-  name-server: 103.84.110.202:9876
+  name-server: 192.168.30.150:9876
   producer-group: sport_rocketmq_producer_group
   producer-timeout: 300000

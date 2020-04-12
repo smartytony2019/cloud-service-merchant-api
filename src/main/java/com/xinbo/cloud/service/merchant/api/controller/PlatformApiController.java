@@ -233,6 +233,7 @@ public class PlatformApiController {
                     .sessionTimeout(zookeeperSessionTimeout)
                     .lockName(lockName)
                     .build();
+           boolean result1 = userServiceApi.updateUserInfoMoney(userInfoMoneyVo);
             DistributedLock lock = null;
             try {
                 lock = new DistributedLock(config);

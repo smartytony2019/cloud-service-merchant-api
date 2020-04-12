@@ -28,7 +28,7 @@ dubbo:
     address: nacos://127.0.0.1:8848
     check: false
 zookeeper:
-  server-addr: 45.125.218.106:2181,45.125.218.106:2182,45.125.218.106:2183
+  server-addr: 103.84.110.202:2181,103.84.110.202:2182,103.84.110.202:2183
   session-timeout: 120000
 rocketmq:
   name-server: 103.84.110.202:9876
