@@ -2,4 +2,4 @@ FROM openjdk:8-jdk-alpine
 VOLUME /tmp
 ADD cloud-service-merchant-api.jar app.jar
 EXPOSE 13000
-ENTRYPOINT ["java","-Djava.security.egd=file:/dev/./urandom","-Dspring.profiles.active=prod","-jar","/app.jar"]
+ENTRYPOINT ["java","-Djava.security.egd=file:/dev/./urandom","-Dspring.profiles.active=prod","-Dspring.application.name=cloud-service-merchant-api","-jar","/app.jar"]
