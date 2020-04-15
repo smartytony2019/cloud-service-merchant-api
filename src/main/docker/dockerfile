@@ -1,4 +1,4 @@
-FROM openjdk:8-jdk-alpine
+FROM openjdk:8-jdk
 VOLUME /tmp
 ADD cloud-service-merchant-api.jar app.jar
 EXPOSE 13000
