@@ -187,7 +187,7 @@ public class PlatformApiController {
             //发送事务消息
             SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message);
             boolean isCommit = JSONUtil.toJsonStr(sendResult).contains("COMMIT_MESSAGE");
-            if (sendResult.getSendStatus() != SendStatus.SEND_OK || isCommit) {
+            if (sendResult.getSendStatus() != SendStatus.SEND_OK || !isCommit) {
                 log.debug("体育活跃用户登录统计初使化写入队列失败");
             }
         } catch (Exception ex) {
