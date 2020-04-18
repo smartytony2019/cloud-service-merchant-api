@@ -163,10 +163,7 @@ public class PlatformApiController {
                     .dataNode(merchant.getDataNode()).regIp(ip).loginIp(ip)
                     .type(UserTypeEnum.Formal.getCode()).passWord(DesEncrypt.Encrypt("123456")).build();
             UserInfoDto userInfoDto = userServiceApi.insertUserInfo(userinfo);
-            if (userInfoDto == null) {
-                return ResultFactory.error("创建用户失败");
-            }
-            if (StrUtil.isBlank(userInfoDto.get_userId())) {
+            if (userInfoDto == null || StrUtil.isBlank(userInfoDto.get_userId())) {
                 return ResultFactory.error("创建用户失败");
             }
             //Step 4：用户活跃统计初使化
@@ -189,8 +186,8 @@ public class PlatformApiController {
             RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(sportActiveUserOperationDto)).messageId(RocketMessageIdEnum.Sport_ActiveUserInto.getCode()).build();
             //发送事务消息
             SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message);
-            boolean isCommit = JSONUtil.toJsonStr(sendResult).indexOf("COMMIT_MESSAGE") != -1;
-            if (sendResult.getSendStatus() != SendStatus.SEND_OK || isCommit) {
+            boolean isCommit = JSONUtil.toJsonStr(sendResult).contains("COMMIT_MESSAGE");
+            if (sendResult.getSendStatus() != SendStatus.SEND_OK || !isCommit) {
                 log.debug("体育活跃用户登录统计初使化写入队列失败");
             }
         } catch (Exception ex) {
@@ -397,7 +394,7 @@ public class PlatformApiController {
             PlatformApiCommon.validateSign(loginOutVo, merchant.getMerchantKey());
             //Step 3: 验证用户
             UserInfoDto userInfoDto = PlatformApiCommon.getUserInfo(userServiceApi, username, merchant.getDataNode());
-            UserInfoVo userInfoVo = UserInfoVo.builder().userName(userInfoDto.getUserName()).build();
+
             boolean bResult = userServiceApi.administratorKicked(username);
             return bResult ? ResultFactory.success() : ResultFactory.error();
         } catch (Exception ex) {

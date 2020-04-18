@@ -15,6 +15,8 @@ logging:
     com.xinbo: debug
   file:
     max-size: 5MB
+    name: ./logs/${spring.application.name}.log
+    max-history: 10
 dubbo:
   scan:
     base-packages: com.xinbo.cloud.service.merchant.api
