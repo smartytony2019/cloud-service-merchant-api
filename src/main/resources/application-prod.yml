@@ -7,9 +7,6 @@ spring:
     nacos:
       discovery:
         server-addr: 192.168.30.88:8848
-    sentinel:
-      transport:
-        dashboard: 192.168.30.88:8002
 logging:
   level:
     com.xinbo: debug
@@ -26,7 +23,7 @@ dubbo:
   consumer:
     check: false
   registry:
-    address: 192.168.30.88:8848
+    address: nacos://192.168.30.88:8848
     check: false
 zookeeper:
   server-addr: 192.168.30.88:2181,192.168.30.88:2182,192.168.30.88:2183
