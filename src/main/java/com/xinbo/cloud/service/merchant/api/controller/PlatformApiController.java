@@ -114,7 +114,7 @@ public class PlatformApiController {
             MerchantDto merchant = PlatformApiCommon.validateMerchant(merchantServiceApi, playGameVo.getChannel());
             String username = MessageFormat.format("{0}_{1}", merchant.getMerchantCode(), playGameVo.getUsername());
             //Step 3: 验证签名
-            PlatformApiCommon.validateSign(playGameVo, merchant.getMerchantKey());
+//            PlatformApiCommon.validateSign(playGameVo, merchant.getMerchantKey());
 
             //Step 4: 验证用户
             UserInfoDto userInfoDto = PlatformApiCommon.getUserInfo(userServiceApi, username, merchant.getDataNode());
