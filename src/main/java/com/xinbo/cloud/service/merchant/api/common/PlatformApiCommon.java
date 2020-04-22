@@ -32,16 +32,16 @@ public class PlatformApiCommon {
      * @return
      */
     public static void validateSign(Object obj, String merchantKey) {
-        Map map = MapperUtil.to(obj, Map.class);
-        String strSign = MapUtil.getStr(map, "sign");
-        map.remove("sign");
-        String str = StringUtils.join(MapUtil.sort(map).values(), "");
-        str += merchantKey;
-        String strMd5 = DigestUtil.md5Hex(str).toLowerCase();
-        if (!strSign.equals(strMd5)) {
-            log.debug(MessageFormat.format("验证签名失败,签名字符串：{0},签名结果：{1},第三方签名串:{2}", str, strMd5, strSign));
-            throw new RuntimeException("验证签名失败");
-        }
+//        Map map = MapperUtil.to(obj, Map.class);
+//        String strSign = MapUtil.getStr(map, "sign");
+//        map.remove("sign");
+//        String str = StringUtils.join(MapUtil.sort(map).values(), "");
+//        str += merchantKey;
+//        String strMd5 = DigestUtil.md5Hex(str).toLowerCase();
+//        if (!strSign.equals(strMd5)) {
+//            log.debug(MessageFormat.format("验证签名失败,签名字符串：{0},签名结果：{1},第三方签名串:{2}", str, strMd5, strSign));
+//            throw new RuntimeException("验证签名失败");
+//        }
     }
 
     /**
