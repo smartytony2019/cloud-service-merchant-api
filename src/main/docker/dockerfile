@@ -3,4 +3,4 @@ VOLUME /tmp
 ADD skywalking-7.0.0.tar.gz /skywalking
 ADD cloud-service-merchant-api.jar app.jar
 EXPOSE 13000
-ENTRYPOINT ["java","-Dskywalking.agent.service_name=cloud-service-merchant-api","-Dskywalking.collector.backend_service=192.168.30.88:11800","-javaagent:/skywalking/skywalking-agent.jar","-Dorg.apache.skywalking.apm.dependencies.io.netty.noUnsafe=true","-Dspring.profiles.active=prod","-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+ENTRYPOINT ["java","-Dskywalking.agent.service_name=cloud-service-merchant-api","-Dskywalking.collector.backend_service=192.168.30.88:11800","-javaagent:/skywalking/skywalking-agent.jar","-Dspring.profiles.active=prod","-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
