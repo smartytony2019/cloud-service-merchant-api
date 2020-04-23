@@ -103,7 +103,6 @@ public class PlatformApiController {
     @PostMapping("playGame")
     public ActionResult playGame(@Valid @RequestBody PlatformApiRequestVo playGameVo) {
         try {
-
             int gameId = Integer.parseInt(playGameVo.getGameId());
             //Step 1: 验证游戏Id
             PlatGameTypeEnum platGameTypeEnum = PlatGameTypeEnum.valueOf(gameId);
