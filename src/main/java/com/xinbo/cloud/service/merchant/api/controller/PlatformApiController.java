@@ -13,7 +13,7 @@ import com.xinbo.cloud.common.dto.RocketMessage;
 import com.xinbo.cloud.common.dto.common.GameAddressDto;
 import com.xinbo.cloud.common.dto.common.MerchantDto;
 import com.xinbo.cloud.common.dto.common.UserToken;
-import com.xinbo.cloud.common.dto.statistics.SportActiveUserOperationDto;
+import com.xinbo.cloud.common.dto.statistics.ActiveUserOperationDto;
 import com.xinbo.cloud.common.dto.statistics.UserBalanceOperationDto;
 import com.xinbo.cloud.common.enums.*;
 import com.xinbo.cloud.common.config.ZookeeperConfig;
@@ -26,7 +26,6 @@ import com.xinbo.cloud.common.library.DistributedLock;
 import com.xinbo.cloud.common.library.rocketmq.RocketMQService;
 import com.xinbo.cloud.common.service.api.*;
 import com.xinbo.cloud.common.vo.common.UpdateUserInfoMoneyVo;
-import com.xinbo.cloud.common.vo.common.UserInfoVo;
 import com.xinbo.cloud.common.vo.library.cache.StringVo;
 import com.xinbo.cloud.common.vo.merchanta.api.PlatformApiRequestVo;
 import com.xinbo.cloud.common.vo.merchanta.api.TransRecordRequestVo;
@@ -113,7 +112,7 @@ public class PlatformApiController {
             MerchantDto merchant = PlatformApiCommon.validateMerchant(merchantServiceApi, playGameVo.getChannel());
             String username = MessageFormat.format("{0}_{1}", merchant.getMerchantCode(), playGameVo.getUsername());
             //Step 3: 验证签名
-//            PlatformApiCommon.validateSign(playGameVo, merchant.getMerchantKey());
+            PlatformApiCommon.validateSign(playGameVo, merchant.getMerchantKey());
 
             //Step 4: 验证用户
             UserInfoDto userInfoDto = PlatformApiCommon.getUserInfo(userServiceApi, username, merchant.getDataNode());
@@ -130,7 +129,7 @@ public class PlatformApiController {
 
             //Step 6.生成token并加入redis
             String token = UUID.randomUUID().toString();
-            UserToken userToken = UserToken.builder().merchantCode(merchant.getMerchantCode()).token(token).time(new Date())
+            UserToken userToken = UserToken.builder().merchantCode(merchant.getMerchantCode()).token(token).time(new Date()).gameId(gameId)
                     .userId(userInfoDto.getUserId()).dataNode(merchant.getDataNode()).userName(userInfoDto.getUserName()).build();
 
             String userTokenKey = MessageFormat.format(CacheConfig.USER_TOKEN_KEY, token);
@@ -149,6 +148,12 @@ public class PlatformApiController {
     @PostMapping("createAccount")
     public ActionResult createAccount(@Valid @RequestBody PlatformApiRequestVo createAccountVo) {
         try {
+            int gameId = Integer.parseInt(createAccountVo.getGameId());
+            //Step 1: 验证游戏Id
+            PlatGameTypeEnum platGameTypeEnum = PlatGameTypeEnum.valueOf(gameId);
+            if (platGameTypeEnum == null) {
+                ResultFactory.error("游戏不存在");
+            }
             //Step 1: 验证渠道号
             MerchantDto merchant = PlatformApiCommon.validateMerchant(merchantServiceApi, createAccountVo.getChannel());
             String username = MessageFormat.format("{0}_{1}", merchant.getMerchantCode(), createAccountVo.getUsername());
@@ -166,31 +171,33 @@ public class PlatformApiController {
                 return ResultFactory.error("创建用户失败");
             }
             //Step 4：用户活跃统计初使化
-            setRocketSportActiveUserInto(userInfoDto);
+            setRocketSportActiveUserInto(userInfoDto, Integer.parseInt(createAccountVo.getGameId()));
             return ResultFactory.success(userInfoDto.get_userId());
         } catch (Exception ex) {
             return ResultFactory.error(ex.getMessage());
         }
     }
 
-    private void setRocketSportActiveUserInto(UserInfoDto userInfoDto) {
+    private void setRocketSportActiveUserInto(UserInfoDto userInfoDto, int gameId) {
         try {
-            SportActiveUserOperationDto sportActiveUserOperationDto = SportActiveUserOperationDto.builder().merchantCode(userInfoDto.getMerchantCode())
+            int messageId = RocketMessageIdEnum.Sport_ActiveUserInto.getCode();
+            if (gameId == PlatGameTypeEnum.Lottery.getCode())
+                messageId = RocketMessageIdEnum.Lottery_ActiveUserInto.getCode();
+            ActiveUserOperationDto activeUserOperationDto = ActiveUserOperationDto.builder().merchantCode(userInfoDto.getMerchantCode())
                     .merchantName(userInfoDto.getMerchantName()).userName(userInfoDto.getUserName()).operationTime(new Date()).ip(userInfoDto.getRegIp())
                     .dataNode(userInfoDto.getDataNode()).build();
             RocketMQConfig rocketMQConfig = RocketMQConfig.builder().nameServer(nameServer).producerGroup(producerGroup)
                     .producerTimeout(producerTimeout).producerTopic(RocketMQTopic.STATISTICS_TOPIC).build();
             //构建队列消息
-
-            RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(sportActiveUserOperationDto)).messageId(RocketMessageIdEnum.Sport_ActiveUserInto.getCode()).build();
+            RocketMessage message = RocketMessage.<String>builder().messageBody(JSONUtil.toJsonStr(activeUserOperationDto)).messageId(messageId).build();
             //发送事务消息
             SendResult sendResult = rocketMQService.setRocketMQConfig(rocketMQConfig).send(message);
             boolean isCommit = JSONUtil.toJsonStr(sendResult).contains("COMMIT_MESSAGE");
             if (sendResult.getSendStatus() != SendStatus.SEND_OK || !isCommit) {
-                log.debug("体育活跃用户登录统计初使化写入队列失败");
+                log.debug("活跃用户登录统计初使化写入队列失败");
             }
         } catch (Exception ex) {
-            log.debug(MessageFormat.format("体育活跃用户登录统计初使化写入队列失败，原因：{0}", ex.toString()));
+            log.debug(MessageFormat.format("活跃用户登录统计初使化写入队列失败，原因：{0}", ex.toString()));
         }
     }
 
